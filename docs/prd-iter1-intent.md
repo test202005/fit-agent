@@ -1,6 +1,6 @@
 # iter-1 专项 PRD — 意图识别
 
-> 状态：v3——PRD 已确认，可进入 architecture；退出阈值待 discovery baseline 后确定
+> 状态：v4——PRD 已确认；补充 confidence 数字字符串归一化的正式变更记录
 > 上游：[prd.md](prd.md) v2（Phase 1 总需求）、[master-plan.md](master-plan.md) v3 Iteration 1 节
 > 范围：仅意图路由。不含 extractor、存储写入、查询业务、HTTP 接口。本文只定业务口径，实现细节归 architecture。
 
@@ -187,3 +187,13 @@ discovery 集跑 baseline（3 次）
 9. 故障注入 Case 不进三分类指标
 10. badcase 分级处置：范围内稳定复现必须修复回归，不得登记绕过
 11. iter-1 无降级路径；空/超长输入（Unicode 字符数 > 500）不调 LLM
+
+## 9. 变更记录
+
+### v4（2026-07-19，主人确认）
+
+- 正式采纳窄口径 confidence 归一化：仅允许把合法 JSON 中 0～1 的数字字符串转换为 number；
+- confidence 不参与意图决策，归一化用于避免格式噪声污染语义指标；
+- 非数字字符串、越界数字字符串和非法 JSON 仍返回 `llm_parse_error`；
+- Runner 必须报告每轮 `confidence_normalized_count`，兼容行为可以存在但不能不可见；
+- 本变更补齐 Iteration 1 执行期间未经正式记录的契约调整，经主人于 2026-07-19 明确批准。

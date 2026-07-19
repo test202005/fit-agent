@@ -51,6 +51,7 @@ fit-agent/
 - 密钥走环境变量 `DEEPSEEK_API_KEY`，不进代码不进 commit
 - **Prompt 版本证据**：每次修改 Prompt 必须单独 commit；正式评测报告同时记录 Git commit 与 prompt hash
 - **locked 使用规则**：调优期间只运行 discovery / regression；locked 仅在候选版本冻结后一次性运行 3 轮。已暴露的 locked Case 转入 regression，补位 Case 由未参与当前 Prompt 调优的人盲写
+- **契约文档变更管控**：PRD、架构和契约类文档的实质修改必须先经主人确认，再单独 commit 并说明变更原因。执行中发现文档与现实冲突时，AI 只能先在进度或 Review 文档提出变更申请，不得直接改写契约
 
 ## 技术栈
 

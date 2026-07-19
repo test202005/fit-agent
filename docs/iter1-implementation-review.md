@@ -37,9 +37,11 @@
 
 ### 1. 解析契约偏离，代码与报告自述矛盾
 
-- 报告写"Router 保持严格解析，不增加容错绕过"，但 `router.py:35-39` 接受字符串数字 confidence（`"0.9"` 转 float 放行）
-- PRD 决策 5：confidence 类型错 → `llm_parse_error`；宁严不宽的目的就是让模型格式问题暴露在解析错误率里，字符串容错正在掩盖它
-- **修复**：删除字符串转换分支，字符串 confidence 一律 `llm_parse_error`；同步更新单测（新增字符串数字 case，期望 parse_error）；修复后跑一轮 live discovery 观察解析错误率是否上升——若上升，说明容错此前确实在掩盖问题，把数据记入报告
+> 2026-07-19复核：原结论作废。主人已批准PRD v4保留窄口径数字字符串归一化，附加条件是Runner报告`confidence_normalized_count`，完整决议见[评测计划 Review](eval-plan-review.md)。
+
+- 合法JSON中的0～1 confidence数字字符串允许归一化；
+- 非数字字符串、越界数字字符串和非法JSON仍返回`llm_parse_error`；
+- 正式报告必须让归一化发生次数可见。
 
 ### 2. locked 集使用姿势削弱验收证明力
 
@@ -63,7 +65,7 @@
 ## 六、关账门禁（全部勾选后 iter-1 才算完成）
 
 - [ ] 全部现状已 commit，prompt 变更单独 commit 的规矩已入 CLAUDE.md
-- [ ] confidence 字符串容错已删除，单测覆盖，live discovery 复跑记录解析错误率变化
+- [ ] PRD已升v4，confidence归一化边界有单测，报告含`confidence_normalized_count`
 - [ ] 纯否定补至 ≥3 条
 - [ ] 报告快照含 temperature / 采样参数
 - [ ] locked 干净验收：修复后的版本一次性 3 轮，达到既定门槛（macro-F1 ≥ 0.90 等，见 `eval/reports/迭代一意图识别评测报告.md` 退出门槛节）
