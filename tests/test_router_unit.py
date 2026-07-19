@@ -30,6 +30,7 @@ def test_parse_router_output_valid(raw, expected):
         '{"intent":"record"}',
         '{"intent":"record","confidence":true}',
         '{"intent":"record","confidence":"high"}',
+        '{"intent":"record","confidence":"1.1"}',
         '{"intent":"record","confidence":1.1}',
         '{"intent":"record","confidence":0.9,"extra":1}',
     ],
@@ -68,6 +69,18 @@ def test_stub_success_has_complete_trace():
     }
 
 
+def test_numeric_string_confidence_is_visible_in_trace():
+    tracer = Tracer()
+    result = route(
+        "今天练了胸",
+        StubLLM(raw_text='{"intent":"record","confidence":"0.9"}'),
+        tracer,
+    )
+    parse_event = next(event for event in tracer.events if event["event"] == "parse_result")
+    assert result["ok"] is True
+    assert parse_event["payload"]["confidence_normalized"] is True
+
+
 @pytest.mark.parametrize(
     "fault", ["llm_timeout", "llm_api_error", "llm_parse_error"]
 )
@@ -96,6 +109,7 @@ def test_report_contains_case_trace_and_badcase():
         "macro_f1": 0.0,
         "present_labels_macro_f1": 0.0,
         "parse_errors": 1,
+        "confidence_normalized_count": 1,
         "high_risk_into_record": 0,
         "per_class": {
             label: {"precision": 0.0, "recall": 0.0, "f1": 0.0}
@@ -119,4 +133,5 @@ def test_report_contains_case_trace_and_badcase():
     assert "t-test" in report
     assert "git_commit: test-commit" in report
     assert "temperature: 0" in report
+    assert "confidence_normalized_count: 1" in report
     assert "## Badcases" in report

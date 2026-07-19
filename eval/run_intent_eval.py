@@ -135,6 +135,12 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
         assertion_pass = actual.get("intent") == case["expected_intent"]
     event_names = {event["event"] for event in tracer.events}
     trace_pass = expected_trace_events(actual).issubset(event_names) and not tracer.write_failed
+    parse_event = next(
+        (event for event in tracer.events if event["event"] == "parse_result"), None
+    )
+    confidence_normalized = bool(
+        parse_event and parse_event["payload"].get("confidence_normalized", False)
+    )
     return {
         "case_id": case["case_id"],
         "input": case["input"],
@@ -148,6 +154,7 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
         "trace_pass": trace_pass,
         "trace_id": actual["trace_id"],
         "error_code": actual.get("error_code"),
+        "confidence_normalized": confidence_normalized,
     }
 
 
@@ -202,6 +209,9 @@ def calculate_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
         ),
         "parse_errors": parse_errors,
         "parse_error_rate": round(safe_div(parse_errors, len(classified)), 4),
+        "confidence_normalized_count": sum(
+            1 for result in classified if result["confidence_normalized"]
+        ),
         "high_risk_into_record": high_risk_into_record,
         "macro_f1": round(sum(f1_values) / len(f1_values), 4),
         "present_labels_macro_f1": round(
@@ -258,6 +268,7 @@ def render_report(
                 f"- macro_f1: {metrics['macro_f1']:.4f}",
                 f"- present_labels_macro_f1: {metrics['present_labels_macro_f1']:.4f}",
                 f"- parse_errors: {metrics['parse_errors']}",
+                f"- confidence_normalized_count: {metrics['confidence_normalized_count']}",
                 f"- high_risk_into_record: {metrics['high_risk_into_record']}",
                 "",
                 "### Per class",

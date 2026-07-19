@@ -21,7 +21,7 @@ def load_prompt() -> tuple[str, str]:
     return content, prompt_hash
 
 
-def parse_router_output(raw_text: str) -> tuple[str, float]:
+def _parse_router_output_details(raw_text: str) -> tuple[str, float, bool]:
     try:
         parsed = json.loads(raw_text)
     except (json.JSONDecodeError, TypeError) as exc:
@@ -30,6 +30,7 @@ def parse_router_output(raw_text: str) -> tuple[str, float]:
         raise ValueError("invalid fields")
     intent = parsed["intent"]
     confidence = parsed["confidence"]
+    confidence_normalized = False
     if intent not in INTENTS:
         raise ValueError("invalid intent")
     if isinstance(confidence, str):
@@ -37,11 +38,17 @@ def parse_router_output(raw_text: str) -> tuple[str, float]:
             confidence = float(confidence)
         except ValueError as exc:
             raise ValueError("invalid confidence type") from exc
+        confidence_normalized = True
     if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
         raise ValueError("invalid confidence type")
     if not 0 <= confidence <= 1:
         raise ValueError("invalid confidence range")
-    return intent, float(confidence)
+    return intent, float(confidence), confidence_normalized
+
+
+def parse_router_output(raw_text: str) -> tuple[str, float]:
+    intent, confidence, _ = _parse_router_output_details(raw_text)
+    return intent, confidence
 
 
 def route(text: str, llm: LLMClient, tracer: Tracer) -> dict[str, Any]:
@@ -79,7 +86,9 @@ def route(text: str, llm: LLMClient, tracer: Tracer) -> dict[str, Any]:
         {"raw_text": llm_result.raw_text, "duration_ms": duration_ms},
     )
     try:
-        intent, confidence = parse_router_output(llm_result.raw_text)
+        intent, confidence, confidence_normalized = _parse_router_output_details(
+            llm_result.raw_text
+        )
     except ValueError:
         tracer.emit(trace_id, "parse_result", {"ok": False})
         result = {"ok": False, "trace_id": trace_id, "error_code": "llm_parse_error"}
@@ -89,7 +98,12 @@ def route(text: str, llm: LLMClient, tracer: Tracer) -> dict[str, Any]:
     tracer.emit(
         trace_id,
         "parse_result",
-        {"ok": True, "intent": intent, "confidence": confidence},
+        {
+            "ok": True,
+            "intent": intent,
+            "confidence": confidence,
+            "confidence_normalized": confidence_normalized,
+        },
     )
     result = {
         "ok": True,
