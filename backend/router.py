@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from backend.llm import LLMApiError, LLMClient, LLMTimeout
+from backend.llm import LLMApiError, LLMClient, LLMTimeout, TEMPERATURE
 from backend.trace import Tracer
 
 
@@ -58,7 +58,7 @@ def route(text: str, llm: LLMClient, tracer: Tracer) -> dict[str, Any]:
     tracer.emit(
         trace_id,
         "llm_request",
-        {"model": llm.model, "prompt_hash": prompt_hash, "temperature": 0},
+        {"model": llm.model, "prompt_hash": prompt_hash, "temperature": TEMPERATURE},
     )
     started = time.perf_counter()
     try:

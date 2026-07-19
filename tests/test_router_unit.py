@@ -82,8 +82,14 @@ def test_report_contains_case_trace_and_badcase():
         "view": "discovery",
         "run_mode": "live",
         "model": "test-model",
+        "git_commit": "test-commit",
         "prompt_hash": "sha256:prompt",
         "dataset_hash": "sha256:dataset",
+        "temperature": 0,
+        "max_tokens": 100,
+        "thinking": "disabled",
+        "timeout_seconds": 30.0,
+        "max_retries": 0,
     }
     metrics = {
         "end_to_end_pass_rate": 0.0,
@@ -111,4 +117,6 @@ def test_report_contains_case_trace_and_badcase():
 
     assert "case-1" in report
     assert "t-test" in report
+    assert "git_commit: test-commit" in report
+    assert "temperature: 0" in report
     assert "## Badcases" in report

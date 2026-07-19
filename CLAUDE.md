@@ -49,6 +49,8 @@ fit-agent/
 - **范围红线**：范围蔓延是本项目头号风险。master-plan 的「非目标」清单里的东西不做；每个 Phase 验收标准中测试产出是硬指标，功能"够测"即停
 - **LLM 可替换**：所有 LLM 调用走统一入口，支持 stub 注入，保证回归不花 token
 - 密钥走环境变量 `DEEPSEEK_API_KEY`，不进代码不进 commit
+- **Prompt 版本证据**：每次修改 Prompt 必须单独 commit；正式评测报告同时记录 Git commit 与 prompt hash
+- **locked 使用规则**：调优期间只运行 discovery / regression；locked 仅在候选版本冻结后一次性运行 3 轮。已暴露的 locked Case 转入 regression，补位 Case 由未参与当前 Prompt 调优的人盲写
 
 ## 技术栈
 

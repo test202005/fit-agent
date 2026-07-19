@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import os
+import subprocess
 import sys
 from collections import Counter
 from datetime import datetime, timezone
@@ -16,7 +17,15 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backend.llm import LiveLLM, StubLLM  # noqa: E402
+from backend.llm import (  # noqa: E402
+    MAX_RETRIES,
+    MAX_TOKENS,
+    TEMPERATURE,
+    THINKING_MODE,
+    TIMEOUT_SECONDS,
+    LiveLLM,
+    StubLLM,
+)
 from backend.router import PROMPT_PATH, route  # noqa: E402
 from backend.trace import Tracer  # noqa: E402
 
@@ -26,6 +35,12 @@ RESULTS_DIR = ROOT / "eval" / "results"
 TRACE_PATH = ROOT / "backend" / "logs" / "trace.jsonl"
 LABELS = ["record", "query", "reject"]
 EXCLUDED_PARTS = {"__pycache__", ".pytest_cache", "logs", "results"}
+HIGH_RISK_REJECT_CATEGORIES = {
+    "reject-pure-negative",
+    "reject-future",
+    "reject-consultation",
+    "reject-injection",
+}
 
 
 def load_dotenv() -> None:
@@ -44,8 +59,25 @@ def sha256_file(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def git_commit() -> str:
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return completed.stdout.strip() if completed.returncode == 0 else "uncommitted"
+
+
 def load_cases(view: str, run_mode: str) -> list[dict[str, Any]]:
     cases = [json.loads(line) for line in DATASET_PATH.read_text(encoding="utf-8").splitlines()]
+    for case in cases:
+        if (
+            case.get("category") in HIGH_RISK_REJECT_CATEGORIES
+            and case.get("risk") != "high"
+        ):
+            raise ValueError(f"{case['case_id']} must be marked as high risk")
     selected = []
     for case in cases:
         is_fault = "inject_fault" in case
@@ -202,8 +234,14 @@ def render_report(
         f"- view: {metadata['view']}",
         f"- run_mode: {metadata['run_mode']}",
         f"- model: {metadata['model']}",
+        f"- git_commit: {metadata['git_commit']}",
         f"- prompt_hash: {metadata['prompt_hash']}",
         f"- dataset_hash: {metadata['dataset_hash']}",
+        f"- temperature: {metadata['temperature']}",
+        f"- max_tokens: {metadata['max_tokens']}",
+        f"- thinking: {metadata['thinking']}",
+        f"- timeout_seconds: {metadata['timeout_seconds']}",
+        f"- max_retries: {metadata['max_retries']}",
         f"- runs: {len(metrics_by_run)}",
         "",
         "> Stub results validate contracts only; they do not represent model quality."
@@ -313,8 +351,14 @@ def main() -> int:
         "view": args.views,
         "run_mode": args.run_mode,
         "model": live_llm.model if live_llm else "stub",
+        "git_commit": git_commit(),
         "prompt_hash": sha256_file(PROMPT_PATH),
         "dataset_hash": sha256_file(DATASET_PATH),
+        "temperature": TEMPERATURE,
+        "max_tokens": MAX_TOKENS,
+        "thinking": THINKING_MODE,
+        "timeout_seconds": TIMEOUT_SECONDS,
+        "max_retries": MAX_RETRIES,
     }
     report_path.write_text(
         render_report(metadata, metrics_by_run, all_results), encoding="utf-8"

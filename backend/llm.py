@@ -5,6 +5,13 @@ from dataclasses import dataclass
 from typing import Protocol
 
 
+TEMPERATURE = 0
+MAX_TOKENS = 100
+TIMEOUT_SECONDS = 30.0
+MAX_RETRIES = 0
+THINKING_MODE = "disabled"
+
+
 class LLMTimeout(Exception):
     pass
 
@@ -35,8 +42,8 @@ class LiveLLM:
         self._client = OpenAI(
             api_key=key,
             base_url="https://api.deepseek.com",
-            timeout=30.0,
-            max_retries=0,
+            timeout=TIMEOUT_SECONDS,
+            max_retries=MAX_RETRIES,
         )
 
     def complete(self, system_prompt: str, user_text: str) -> LLMResult:
@@ -50,9 +57,9 @@ class LiveLLM:
                     {"role": "user", "content": user_text},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0,
-                max_tokens=100,
-                extra_body={"thinking": {"type": "disabled"}},
+                temperature=TEMPERATURE,
+                max_tokens=MAX_TOKENS,
+                extra_body={"thinking": {"type": THINKING_MODE}},
             )
         except APITimeoutError as exc:
             raise LLMTimeout from exc
