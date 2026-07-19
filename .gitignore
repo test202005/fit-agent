@@ -1,0 +1,9 @@
+.DS_Store
+.env
+.venv/
+ds.md
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/logs/
+eval/results/
