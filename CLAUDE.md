@@ -12,7 +12,7 @@
 
 ## 当前阶段
 
-**Phase 1（拆三迭代）· iter-1 意图识别：实现完成，实现 review 判定暂不能关账**（当前恢复入口见 [当前进度.md](当前进度.md)；先处理 [docs/iter1-implementation-review.md](docs/iter1-implementation-review.md) 的 Review 问题，关账门禁六条全勾后才算通过退出门禁；测试入口见 [eval/README.md](eval/README.md)，新一轮计划见 [eval/意图识别评测计划.md](eval/意图识别评测计划.md)，结果见 [eval/reports/迭代一意图识别评测报告.md](eval/reports/迭代一意图识别评测报告.md)，架构见 [docs/architecture-iter1.md](docs/architecture-iter1.md)，PRD 见 [docs/prd-iter1-intent.md](docs/prd-iter1-intent.md) v3）。SDK 使用 OpenAI Python SDK 兼容 DeepSeek API，模型默认 `deepseek-v4-flash`。总纲见 [docs/master-plan.md](docs/master-plan.md)（v3），Phase 1 总需求见 [docs/prd.md](docs/prd.md)（v2）。
+**Phase 1（拆三迭代）· iter-1 意图识别：已正式关账**（运行版本 `1a61947`；单测、Stub、DeepSeek discovery/regression/locked 回归均通过，实现 Review 六条关账门禁已关闭。当前恢复入口见 [当前进度.md](当前进度.md)；测试入口见 [eval/README.md](eval/README.md)，下一轮评测计划见 [eval/意图识别评测计划.md](eval/意图识别评测计划.md)，五项待合入决议见 [docs/eval-plan-review.md](docs/eval-plan-review.md)，结果见 [eval/reports/迭代一意图识别评测报告.md](eval/reports/迭代一意图识别评测报告.md)，架构见 [docs/architecture-iter1.md](docs/architecture-iter1.md)，PRD 见 [docs/prd-iter1-intent.md](docs/prd-iter1-intent.md) v4）。SDK 使用 OpenAI Python SDK 兼容 DeepSeek API，模型默认 `deepseek-v4-flash`。总纲见 [docs/master-plan.md](docs/master-plan.md)（v3），Phase 1 总需求见 [docs/prd.md](docs/prd.md)（v2）。
 
 流程约定：每迭代先写专项 PRD → 主人评审 → 过门禁 → 动码 → 过退出门禁才进下一迭代。iter-1 动码时先 `git init` + `.gitignore`（logs/、数据文件）。
 

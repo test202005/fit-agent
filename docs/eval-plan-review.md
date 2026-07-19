@@ -1,6 +1,6 @@
 # 评测计划 Review + PRD 变更事件处理
 
-> 状态：已拍板（主人 2026-07-19 确认），待执行
+> 状态：confidence 契约修正已完成；评测计划五项决议待合入（主人 2026-07-19 确认）
 > Review 对象：`eval/意图识别评测计划.md`、`docs/prd-iter1-intent.md` 的未授权变更、`当前进度.md` P1-1
 > 本文效力：对 confidence 契约争议和评测计划待定点作出最终决议；与 `当前进度.md` P1-1 的旧表述冲突时，以本文为准
 
@@ -27,11 +27,11 @@
 
 ### 需要 codex 执行的修正
 
-- [ ] PRD 状态行升 v4 + 变更记录节
-- [ ] Runner 增加 `confidence_normalized_count` 并进报告
-- [ ] `当前进度.md` P1-1 重写：结论从"不允许照 Review 删除兼容逻辑"改为"归一化经主人确认保留（v4），附加可见性指标"，并链接本文
-- [ ] CLAUDE.md 纪律节加入 PRD 变更管控规则
-- [ ] 单测补：字符串 "0.9" → 归一化通过；字符串 "abc"/越界字符串 → parse_error（把归一化口径钉死在测试里）
+- [x] PRD 状态行升 v4 + 变更记录节
+- [x] Runner 增加 `confidence_normalized_count` 并进报告
+- [x] `当前进度.md` P1-1 重写并链接本文
+- [x] CLAUDE.md 纪律节加入 PRD 变更管控规则
+- [x] 单测补：字符串 "0.9" → 归一化通过；字符串 "abc"/越界字符串 → parse_error
 
 ## 二、评测计划 Review 结论
 
