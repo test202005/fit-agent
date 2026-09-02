@@ -39,7 +39,7 @@ eval/
 |---|---|
 | 开始新一轮意图评测 | [意图识别评测计划](意图识别评测计划.md) |
 | 看 Iteration 1 最终结论 | [正式报告](reports/迭代一意图识别评测报告.md) |
-| 理解当前 100% 的适用边界 | [数据集方法与公司对比](methodology/意图识别数据集设计方法.md) |
+| 理解当前 100% 的适用边界 | [数据集设计方法](methodology/意图识别数据集设计方法.md) |
 | 查看或扩充 Case | [意图数据集](datasets/intent-dataset.jsonl) |
 | 查看评测实现 | [Runner](run_intent_eval.py) |
 | 追溯某次运行 | `results/` 中的报告与逐 Case JSONL，再按 `trace_id` 查 `backend/logs/trace.jsonl` |
@@ -132,4 +132,4 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 
 ## 7. 当前状态
 
-Iteration 1 工程闭环已经完成。当前准确口径是：15 条小规模验收集连续三轮全部通过；这不等于真实用户分布下的意图准确率为 100%。详情见[正式报告](reports/迭代一意图识别评测报告.md)和[数据集方法](methodology/意图识别数据集设计方法.md)。新一轮评测从[意图识别评测计划](意图识别评测计划.md)开始 Review。
+Iteration 1 工程闭环已经完成。当前准确口径是：16 条小规模验收集连续三轮全部通过；这不等于真实用户分布下的意图准确率为 100%。详情见[正式报告](reports/迭代一意图识别评测报告.md)和[数据集方法](methodology/意图识别数据集设计方法.md)。新一轮评测从[意图识别评测计划](意图识别评测计划.md)开始 Review。

@@ -5,10 +5,10 @@
 可测试的健身 Agent 参考实现。消费者侧验证“用一句自然语言低摩擦记录和查询训练”的产品价值；AI 测试侧从第一条能力开始内建 trace、测试钩子和评测集，保证自然语言入口不会以错误记录和不可追溯为代价。业务全貌与目标人群见 [docs/product-overview.md](docs/product-overview.md)。
 
 双重目标：
-1. 复演/验证 Agent 测试方法论（意图路由评测、多轮测试、断言引擎），反哺公司 agent-native 项目
+1. 复演/验证 Agent 测试方法论（意图路由评测、多轮测试、断言引擎），沉淀可复用的评测脚手架
 2. 公开作品：小红书内容 + GitHub 作品集
 
-与 `../project1-suite` 的关系：那是前身，已归档不再迭代。其 `backend/main.py` 的 `run_once()` function calling 写法可作参考。
+前身是一个已归档的原型项目，不再迭代；本项目推倒新建，仅参考其 function calling 的写法。
 
 ## 当前阶段
 

@@ -13,9 +13,9 @@
 - **差异化**：评测闭环（数据集 → 执行 → 断言 → 逐 Case 结果）从 Phase 1 就存在，不是事后补。失败模式也是交付物——抽取不准、路由错分都是评测章节素材。
 - **对外表述**（防概念过度包装）：可测试的对话式健身 Agent 应用参考实现，首阶段从**确定性 LLM workflow** 建立评测闭环，逐步走向 Agent。不把固定链路称作自主 Agent。依据：Anthropic《Building Effective Agents》——从简单可组合的 workflow 开始，业务需要时再加 Agent 复杂度。
 
-## 与 project1-suite 的关系
+## 与前身原型的关系
 
-project1-suite 归档。其问题：API 路径关键词伪路由、无上下文、无 trace、print 调试。本项目推倒新建，仅参考其 `run_once()` 的 function calling 写法。
+前身原型已归档。其问题：API 路径关键词伪路由、无上下文、无 trace、print 调试。本项目推倒新建，仅参考其 `run_once()` 的 function calling 写法。
 
 ---
 
