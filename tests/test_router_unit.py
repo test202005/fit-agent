@@ -5,7 +5,7 @@ import pytest
 from backend.llm import StubLLM
 from backend.router import parse_router_output, route
 from backend.trace import Tracer
-from eval.run_intent_eval import render_report
+from eval.run_intent_eval import assert_contract, expected_trace_events, render_report
 
 
 @pytest.mark.parametrize(
@@ -87,6 +87,74 @@ def test_numeric_string_confidence_is_visible_in_trace():
 def test_stub_faults(fault):
     result = route("今天练了胸", StubLLM(fault=fault), Tracer())
     assert result["error_code"] == fault
+
+
+def failed_checks(result):
+    return {check["name"] for check in assert_contract(result) if not check["pass"]}
+
+
+def test_contract_accepts_valid_shapes():
+    ok = {
+        "ok": True,
+        "trace_id": "t-1",
+        "intent": "record",
+        "confidence": 0.9,
+        "source": "llm",
+    }
+    err = {"ok": False, "trace_id": "t-1", "error_code": "llm_timeout"}
+    assert failed_checks(ok) == set()
+    assert failed_checks(err) == set()
+
+
+def test_contract_catches_business_leak_on_failure():
+    """失败响应泄漏了 intent —— 第三问：不该出现的不许出现。"""
+    leaked = {
+        "ok": False,
+        "trace_id": "t-1",
+        "error_code": "llm_parse_error",
+        "intent": "record",
+    }
+    assert failed_checks(leaked) == {"structure_failure", "no_business_leak"}
+
+
+def test_contract_catches_undefined_error_code():
+    unknown = {"ok": False, "trace_id": "t-1", "error_code": "weird_code"}
+    assert failed_checks(unknown) == {"error_code_enum"}
+
+
+def test_contract_catches_out_of_range_confidence():
+    bad = {
+        "ok": True,
+        "trace_id": "t-1",
+        "intent": "record",
+        "confidence": 1.7,
+        "source": "llm",
+    }
+    assert failed_checks(bad) == {"confidence_range"}
+
+
+def test_contract_catches_extra_field():
+    extra = {
+        "ok": True,
+        "trace_id": "t-1",
+        "intent": "record",
+        "confidence": 0.9,
+        "source": "llm",
+        "debug": "leaked",
+    }
+    assert failed_checks(extra) == {"structure_success"}
+
+
+def test_defense_path_rejects_extra_llm_call():
+    """防御路径若偷偷调了模型，事件集会多出 llm_request —— 精确比对必须判失败。"""
+    result = {"ok": False, "trace_id": "t-1", "error_code": "bad_request"}
+    honest = {"input_received", "result"}
+    sneaky = {"input_received", "llm_request", "result"}
+
+    assert expected_trace_events(result) == honest
+    assert expected_trace_events(result) != sneaky
+    # 旧写法用 issubset，多出的事件不会失败——这正是被修掉的漏洞
+    assert expected_trace_events(result).issubset(sneaky)
 
 
 def test_report_contains_case_trace_and_badcase():

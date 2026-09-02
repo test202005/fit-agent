@@ -34,6 +34,9 @@ DATASET_PATH = ROOT / "eval" / "datasets" / "intent-dataset.jsonl"
 RESULTS_DIR = ROOT / "eval" / "results"
 TRACE_PATH = ROOT / "backend" / "logs" / "trace.jsonl"
 LABELS = ["record", "query", "reject"]
+ERROR_CODES = {"bad_request", "llm_timeout", "llm_api_error", "llm_parse_error"}
+SUCCESS_FIELDS = {"ok", "trace_id", "intent", "confidence", "source"}
+FAILURE_FIELDS = {"ok", "trace_id", "error_code"}
 EXCLUDED_PARTS = {"__pycache__", ".pytest_cache", "logs", "results"}
 HIGH_RISK_REJECT_CATEGORIES = {
     "reject-pure-negative",
@@ -112,11 +115,36 @@ def expected_trace_events(result: dict[str, Any]) -> set[str]:
     return {"input_received", "llm_request", "llm_response", "parse_result", "result"}
 
 
+def assert_contract(result: dict[str, Any]) -> list[dict[str, Any]]:
+    """第一问：系统承诺了什么。响应结构、枚举与互斥，不看业务语义。"""
+    checks: list[tuple[str, bool]] = []
+    if result.get("ok") is True:
+        checks.append(("structure_success", set(result) == SUCCESS_FIELDS))
+        checks.append(("intent_enum", result.get("intent") in LABELS))
+        confidence = result.get("confidence")
+        checks.append(
+            (
+                "confidence_range",
+                isinstance(confidence, (int, float))
+                and not isinstance(confidence, bool)
+                and 0 <= confidence <= 1,
+            )
+        )
+        checks.append(("source_value", result.get("source") == "llm"))
+    else:
+        checks.append(("structure_failure", set(result) == FAILURE_FIELDS))
+        checks.append(("error_code_enum", result.get("error_code") in ERROR_CODES))
+        # 第三问：失败时不许泄漏业务字段
+        checks.append(("no_business_leak", "intent" not in result))
+    return [{"name": name, "pass": passed} for name, passed in checks]
+
+
 def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> dict[str, Any]:
     if run_mode == "stub":
         fault = case.get("inject_fault")
         raw_text = ""
-        if not fault:
+        # 防御类 Case 不该走到模型；剧本留空，一旦真被调用就会落 parse_error 暴露出来
+        if not fault and "expected_intent" in case:
             raw_text = json.dumps(
                 {"intent": case["expected_intent"], "confidence": 0.9},
                 ensure_ascii=False,
@@ -133,8 +161,11 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
         assertion_pass = actual.get("error_code") == case["expected_error_code"]
     else:
         assertion_pass = actual.get("intent") == case["expected_intent"]
+    contract_checks = assert_contract(actual)
+    contract_pass = all(check["pass"] for check in contract_checks)
     event_names = {event["event"] for event in tracer.events}
-    trace_pass = expected_trace_events(actual).issubset(event_names) and not tracer.write_failed
+    # 精确集合比对：多出事件同样算失败，否则「防御路径没调 LLM」断不住
+    trace_pass = expected_trace_events(actual) == event_names and not tracer.write_failed
     parse_event = next(
         (event for event in tracer.events if event["event"] == "parse_result"), None
     )
@@ -150,7 +181,12 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
         "expected": case.get("expected_intent") or case.get("expected_error_code"),
         "actual": actual.get("intent") or actual.get("error_code"),
         "ok": actual.get("ok"),
-        "pass": assertion_pass and trace_pass,
+        "pass": assertion_pass and contract_pass and trace_pass,
+        "semantic_pass": assertion_pass,
+        "contract_pass": contract_pass,
+        "failed_contract_checks": [
+            check["name"] for check in contract_checks if not check["pass"]
+        ],
         "trace_pass": trace_pass,
         "trace_id": actual["trace_id"],
         "error_code": actual.get("error_code"),
