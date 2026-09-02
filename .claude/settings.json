@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python *)",
+      "Bash(.venv/bin/pip *)",
+      "Bash(python3 *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push*)",
+      "Bash(git tag *)",
+      "Bash(git ls-files*)",
+      "Bash(git ls-remote*)",
+      "Bash(git branch*)",
+      "Bash(grep *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(find *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(mkdir *)",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git reset --hard*)",
+      "Bash(git push --force*)",
+      "Bash(gh repo edit *--visibility public*)",
+      "Read(.env)",
+      "Edit(.env)"
+    ]
+  }
+}
