@@ -115,6 +115,62 @@ def expected_trace_events(result: dict[str, Any]) -> set[str]:
     return {"input_received", "llm_request", "llm_response", "parse_result", "result"}
 
 
+ENVIRONMENT_ERROR_CODES = {"llm_timeout", "llm_api_error"}
+
+
+def assert_trace_consistency(
+    result: dict[str, Any], events: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """第四问：说的和做的是否一致。执行痕迹里记的结论必须与返回值吻合。"""
+    checks: list[tuple[str, bool]] = []
+    final = next(
+        (event for event in reversed(events) if event["event"] == "result"), None
+    )
+    checks.append(("result_event_present", final is not None))
+    if final is None:
+        return [{"name": name, "pass": passed} for name, passed in checks]
+
+    payload = final["payload"]
+    checks.append(("trace_ok_matches", payload.get("ok") is result.get("ok")))
+    if result.get("ok") is True:
+        checks.append(("trace_intent_matches", payload.get("intent") == result.get("intent")))
+        parsed = next(
+            (event for event in events if event["event"] == "parse_result"), None
+        )
+        checks.append(
+            (
+                "parse_intent_matches",
+                parsed is not None and parsed["payload"].get("intent") == result.get("intent"),
+            )
+        )
+    else:
+        checks.append(
+            ("trace_error_code_matches", payload.get("error_code") == result.get("error_code"))
+        )
+    return [{"name": name, "pass": passed} for name, passed in checks]
+
+
+def decide_verdict(
+    case: dict[str, Any],
+    result: dict[str, Any],
+    assertion_pass: bool,
+    contract_pass: bool,
+    trace_pass: bool,
+    trace_write_failed: bool,
+) -> str:
+    """四态：把环境异常与评测程序故障，从业务失败里摘出来。"""
+    if trace_write_failed:
+        return "ERROR"
+    expected_error = case.get("expected_error_code")
+    actual_error = result.get("error_code")
+    # 本轮没注入故障，却撞上超时/接口错误 —— 环境问题，不是业务失败
+    if actual_error in ENVIRONMENT_ERROR_CODES and expected_error != actual_error:
+        return "ERROR"
+    if assertion_pass and contract_pass and trace_pass:
+        return "PASS"
+    return "FAIL"
+
+
 def assert_contract(result: dict[str, Any]) -> list[dict[str, Any]]:
     """第一问：系统承诺了什么。响应结构、枚举与互斥，不看业务语义。"""
     checks: list[tuple[str, bool]] = []
@@ -163,9 +219,15 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
         assertion_pass = actual.get("intent") == case["expected_intent"]
     contract_checks = assert_contract(actual)
     contract_pass = all(check["pass"] for check in contract_checks)
+    consistency_checks = assert_trace_consistency(actual, tracer.events)
+    consistency_pass = all(check["pass"] for check in consistency_checks)
     event_names = {event["event"] for event in tracer.events}
     # 精确集合比对：多出事件同样算失败，否则「防御路径没调 LLM」断不住
-    trace_pass = expected_trace_events(actual) == event_names and not tracer.write_failed
+    trace_events_pass = expected_trace_events(actual) == event_names
+    trace_pass = trace_events_pass and consistency_pass and not tracer.write_failed
+    verdict = decide_verdict(
+        case, actual, assertion_pass, contract_pass, trace_pass, tracer.write_failed
+    )
     parse_event = next(
         (event for event in tracer.events if event["event"] == "parse_result"), None
     )
@@ -181,12 +243,22 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
         "expected": case.get("expected_intent") or case.get("expected_error_code"),
         "actual": actual.get("intent") or actual.get("error_code"),
         "ok": actual.get("ok"),
-        "pass": assertion_pass and contract_pass and trace_pass,
+        "verdict": verdict,
+        "pass": verdict == "PASS",
         "semantic_pass": assertion_pass,
         "contract_pass": contract_pass,
-        "failed_contract_checks": [
-            check["name"] for check in contract_checks if not check["pass"]
+        "consistency_pass": consistency_pass,
+        "failed_checks": [
+            check["name"]
+            for check in contract_checks + consistency_checks
+            if not check["pass"]
         ],
+        "assertion_total": len(contract_checks) + len(consistency_checks) + 2,
+        "assertion_passed": (
+            sum(1 for c in contract_checks + consistency_checks if c["pass"])
+            + int(assertion_pass)
+            + int(trace_events_pass)
+        ),
         "trace_pass": trace_pass,
         "trace_id": actual["trace_id"],
         "error_code": actual.get("error_code"),
@@ -199,7 +271,10 @@ def safe_div(numerator: int, denominator: int) -> float:
 
 
 def calculate_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
-    classified = [result for result in results if result["expected"] in LABELS]
+    verdicts = Counter(result["verdict"] for result in results)
+    # 环境异常不进分类指标：超时不代表模型分错了
+    evaluated = [result for result in results if result["verdict"] in {"PASS", "FAIL"}]
+    classified = [result for result in evaluated if result["expected"] in LABELS]
     confusion = {label: {actual: 0 for actual in LABELS} for label in LABELS}
     parse_errors = 0
     for result in classified:
@@ -236,10 +311,23 @@ def calculate_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
         and result["expected"] != "record"
         and result["actual"] == "record"
     )
+    assertion_total = sum(result["assertion_total"] for result in evaluated)
+    assertion_passed = sum(result["assertion_passed"] for result in evaluated)
     return {
         "total": len(results),
         "classified_total": len(classified),
         "passed": sum(1 for result in results if result["pass"]),
+        "verdicts": {
+            state: verdicts.get(state, 0)
+            for state in ("PASS", "FAIL", "REVIEW", "ERROR")
+        },
+        # 两个口径都报：Case 级给产品看影响面，断言级给开发估工作量
+        "case_pass_rate": round(
+            safe_div(verdicts.get("PASS", 0), len(evaluated)), 4
+        ),
+        "assertion_pass_rate": round(safe_div(assertion_passed, assertion_total), 4),
+        "assertion_total": assertion_total,
+        "assertion_passed": assertion_passed,
         "end_to_end_pass_rate": round(
             safe_div(sum(1 for result in results if result["pass"]), len(results)), 4
         ),
@@ -300,6 +388,15 @@ def render_report(
             [
                 f"## Run {index}",
                 "",
+                "### 结果口径",
+                "",
+                f"- 【核心结果】Case 级 {metrics['case_pass_rate']:.4f}"
+                f"（PASS {metrics['verdicts']['PASS']} / FAIL {metrics['verdicts']['FAIL']}）",
+                f"- 【断言明细】断言级 {metrics['assertion_pass_rate']:.4f}"
+                f"（{metrics['assertion_passed']} / {metrics['assertion_total']}）",
+                f"- 【待复核】REVIEW {metrics['verdicts']['REVIEW']}",
+                f"- 【执行异常】ERROR {metrics['verdicts']['ERROR']}（不计入通过率）",
+                "",
                 f"- end_to_end_pass_rate: {metrics['end_to_end_pass_rate']:.4f}",
                 f"- macro_f1: {metrics['macro_f1']:.4f}",
                 f"- present_labels_macro_f1: {metrics['present_labels_macro_f1']:.4f}",
@@ -325,14 +422,14 @@ def render_report(
         [
             "## Case results",
             "",
-            "| run | case_id | expected | actual | pass | trace_id |",
+            "| run | case_id | expected | actual | verdict | trace_id |",
             "|---:|---|---|---|:---:|---|",
         ]
     )
     for result in results:
         lines.append(
             f"| {result['run_index']} | {result['case_id']} | {result['expected']} | "
-            f"{result['actual']} | {'PASS' if result['pass'] else 'FAIL'} | {result['trace_id']} |"
+            f"{result['actual']} | {result['verdict']} | {result['trace_id']} |"
         )
     badcases = [result for result in results if not result["pass"]]
     lines.extend(["", "## Badcases", ""])
@@ -341,15 +438,16 @@ def render_report(
     else:
         lines.extend(
             [
-                "| run | case_id | input | expected | actual | trace_id |",
-                "|---:|---|---|---|---|---|",
+                "| run | case_id | input | expected | actual | verdict | 失败断言 | trace_id |",
+                "|---:|---|---|---|---|:---:|---|---|",
             ]
         )
         for result in badcases:
             escaped_input = result["input"].replace("|", "\\|")
             lines.append(
                 f"| {result['run_index']} | {result['case_id']} | {escaped_input} | "
-                f"{result['expected']} | {result['actual']} | {result['trace_id']} |"
+                f"{result['expected']} | {result['actual']} | {result['verdict']} | "
+                f"{', '.join(result['failed_checks']) or '-'} | {result['trace_id']} |"
             )
     return "\n".join(lines)
 

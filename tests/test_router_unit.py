@@ -5,7 +5,13 @@ import pytest
 from backend.llm import StubLLM
 from backend.router import parse_router_output, route
 from backend.trace import Tracer
-from eval.run_intent_eval import assert_contract, expected_trace_events, render_report
+from eval.run_intent_eval import (
+    assert_contract,
+    assert_trace_consistency,
+    decide_verdict,
+    expected_trace_events,
+    render_report,
+)
 
 
 @pytest.mark.parametrize(
@@ -157,6 +163,76 @@ def test_defense_path_rejects_extra_llm_call():
     assert expected_trace_events(result).issubset(sneaky)
 
 
+def verdict_for(case, result, **kwargs):
+    flags = {
+        "assertion_pass": True,
+        "contract_pass": True,
+        "trace_pass": True,
+        "trace_write_failed": False,
+    }
+    flags.update(kwargs)
+    return decide_verdict(case, result, **flags)
+
+
+def test_unexpected_timeout_is_error_not_fail():
+    """分类 Case 撞上超时是环境问题，不该算业务失败。"""
+    case = {"case_id": "c1", "expected_intent": "record"}
+    result = {"ok": False, "trace_id": "t-1", "error_code": "llm_timeout"}
+    assert verdict_for(case, result, assertion_pass=False) == "ERROR"
+
+
+def test_injected_timeout_is_pass():
+    """故障注入 Case 期望超时，拿到超时就是通过。"""
+    case = {"case_id": "c2", "expected_error_code": "llm_timeout"}
+    result = {"ok": False, "trace_id": "t-1", "error_code": "llm_timeout"}
+    assert verdict_for(case, result) == "PASS"
+
+
+def test_parse_error_is_fail_not_error():
+    """解析失败是真实的 prompt/模型问题，必须计入业务失败。"""
+    case = {"case_id": "c3", "expected_intent": "record"}
+    result = {"ok": False, "trace_id": "t-1", "error_code": "llm_parse_error"}
+    assert verdict_for(case, result, assertion_pass=False) == "FAIL"
+
+
+def test_trace_write_failure_is_error():
+    case = {"case_id": "c4", "expected_intent": "record"}
+    result = {"ok": True, "trace_id": "t-1", "intent": "record"}
+    assert verdict_for(case, result, trace_write_failed=True) == "ERROR"
+
+
+def test_consistency_catches_trace_result_mismatch():
+    """trace 里记的结论与返回值不一致 —— 第四问必须抓到。"""
+    result = {
+        "ok": True,
+        "trace_id": "t-1",
+        "intent": "record",
+        "confidence": 0.9,
+        "source": "llm",
+    }
+    events = [
+        {"event": "parse_result", "payload": {"ok": True, "intent": "record"}},
+        {"event": "result", "payload": {"ok": True, "intent": "query"}},
+    ]
+    failed = {c["name"] for c in assert_trace_consistency(result, events) if not c["pass"]}
+    assert failed == {"trace_intent_matches"}
+
+
+def test_consistency_passes_on_matching_trace():
+    result = {
+        "ok": True,
+        "trace_id": "t-1",
+        "intent": "record",
+        "confidence": 0.9,
+        "source": "llm",
+    }
+    events = [
+        {"event": "parse_result", "payload": {"ok": True, "intent": "record"}},
+        {"event": "result", "payload": {"ok": True, "intent": "record"}},
+    ]
+    assert all(c["pass"] for c in assert_trace_consistency(result, events))
+
+
 def test_report_contains_case_trace_and_badcase():
     metadata = {
         "generated_at": "2026-07-19T00:00:00+00:00",
@@ -174,6 +250,11 @@ def test_report_contains_case_trace_and_badcase():
     }
     metrics = {
         "end_to_end_pass_rate": 0.0,
+        "verdicts": {"PASS": 0, "FAIL": 1, "REVIEW": 0, "ERROR": 2},
+        "case_pass_rate": 0.0,
+        "assertion_pass_rate": 0.75,
+        "assertion_total": 8,
+        "assertion_passed": 6,
         "macro_f1": 0.0,
         "present_labels_macro_f1": 0.0,
         "parse_errors": 1,
@@ -192,6 +273,8 @@ def test_report_contains_case_trace_and_badcase():
         "expected": "record",
         "actual": "llm_parse_error",
         "pass": False,
+        "verdict": "FAIL",
+        "failed_checks": ["structure_failure"],
         "trace_id": "t-test",
     }
 
@@ -203,3 +286,8 @@ def test_report_contains_case_trace_and_badcase():
     assert "temperature: 0" in report
     assert "confidence_normalized_count: 1" in report
     assert "## Badcases" in report
+    # 双口径与四态必须都出现在报告里
+    assert "Case 级" in report
+    assert "断言级" in report
+    assert "ERROR 2" in report
+    assert "structure_failure" in report
