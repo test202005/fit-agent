@@ -81,6 +81,14 @@ def load_cases(view: str, run_mode: str) -> list[dict[str, Any]]:
             and case.get("risk") != "high"
         ):
             raise ValueError(f"{case['case_id']} must be marked as high risk")
+        # 数据质量门禁：每条 Case 必须自带判定方式与来源
+        for field in ("assertion", "source"):
+            if not case.get(field):
+                raise ValueError(f"{case['case_id']} is missing required field {field!r}")
+        if case["assertion"] not in ASSERTIONS:
+            raise ValueError(
+                f"{case['case_id']} declares unknown assertion {case['assertion']!r}"
+            )
     selected = []
     for case in cases:
         is_fault = "inject_fault" in case
@@ -116,6 +124,21 @@ def expected_trace_events(result: dict[str, Any]) -> set[str]:
 
 
 ENVIRONMENT_ERROR_CODES = {"llm_timeout", "llm_api_error"}
+
+# 判定方式由数据声明，不由代码隐式推断——换执行器时断言跟着数据走
+ASSERTIONS = {
+    "intent_equals": lambda case, actual: actual.get("intent") == case["expected_intent"],
+    "error_code_equals": lambda case, actual: (
+        actual.get("error_code") == case["expected_error_code"]
+    ),
+}
+
+
+def run_assertion(case: dict[str, Any], actual: dict[str, Any]) -> bool:
+    name = case["assertion"]
+    if name not in ASSERTIONS:
+        raise ValueError(f"{case['case_id']}: unknown assertion {name!r}")
+    return ASSERTIONS[name](case, actual)
 
 
 def assert_trace_consistency(
@@ -161,6 +184,9 @@ def decide_verdict(
     """四态：把环境异常与评测程序故障，从业务失败里摘出来。"""
     if trace_write_failed:
         return "ERROR"
+    # 规则尚未定义唯一 expected 的探索题：跑但不判分，不污染通过率
+    if case.get("tier") == "observation":
+        return "REVIEW"
     expected_error = case.get("expected_error_code")
     actual_error = result.get("error_code")
     # 本轮没注入故障，却撞上超时/接口错误 —— 环境问题，不是业务失败
@@ -213,10 +239,7 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
 
     tracer = Tracer(TRACE_PATH)
     actual = route(case["input"], llm, tracer)
-    if "expected_error_code" in case:
-        assertion_pass = actual.get("error_code") == case["expected_error_code"]
-    else:
-        assertion_pass = actual.get("intent") == case["expected_intent"]
+    assertion_pass = run_assertion(case, actual)
     contract_checks = assert_contract(actual)
     contract_pass = all(check["pass"] for check in contract_checks)
     consistency_checks = assert_trace_consistency(actual, tracer.events)
