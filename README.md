@@ -27,11 +27,13 @@ LLM 的输出不确定、调用要花钱，于是大多数 Agent 项目的测试
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 
-# 全量契约回归：37 条，零 token，不需要 API key
-.venv/bin/python eval/run_intent_eval.py --views all --run-mode stub
+# 全量契约回归：零 token，不需要 API key
+.venv/bin/python eval/run_intent_eval.py   --views all --run-mode stub   # 意图识别 58 条
+.venv/bin/python eval/run_extract_eval.py  --views all --run-mode stub   # 抽取写入 28 条
+.venv/bin/python eval/run_query_eval.py    --views all --run-mode stub   # 查询 22 条
 ```
 
-只有两个依赖（openai、pytest），这一步不花钱、不需要密钥。
+三个依赖（openai、pytest、flask），这一步不花钱、不需要密钥。
 
 想看真实模型质量，复制 `.env.example` 为 `.env` 填上你自己的 key：
 
@@ -41,8 +43,18 @@ DEEPSEEK_MODEL="deepseek-v4-flash"
 ```
 
 ```bash
-# 真调模型，10 条探路集
+# 真调模型，探路集连跑三轮
 .venv/bin/python eval/run_intent_eval.py --views discovery --run-mode live --runs 3
+```
+
+跑起完整服务：
+
+```bash
+.venv/bin/python -m backend.app          # 默认 5001 端口
+curl -X POST localhost:5001/api/chat -H 'Content-Type: application/json' \
+     -d '{"text":"今天卧推60kg做了4组每组8次"}'
+curl -X POST localhost:5001/api/chat -H 'Content-Type: application/json' \
+     -d '{"text":"今天练了什么"}'
 ```
 
 `.env`、trace 和评测结果都已在 `.gitignore` 里。
@@ -122,9 +134,16 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
 
 ## 当前范围
 
-已实现（Iteration 1）：`record / query / reject` 三分类意图路由、严格 JSON 解析与输入防御、结构化 trace、stub 正常/故障回归、三视图评测、混淆矩阵与 macro-F1。
+一条完整链路已经打通：
 
-**尚未实现**：参数抽取、训练记录写入、查询执行、HTTP 接口、多轮状态、前端。所以它现在是一个**带完整评测闭环的单节点 LLM workflow**，不是自主 Agent——不做概念包装。
+```
+一句话 → 意图路由 → ┬─ record → 字段抽取 → 三态判定 → 受控写入
+                    └─ query  → 查询计划 → 执行 → 结果
+```
+
+已实现：三分类意图路由、字段抽取与 complete/incomplete/invalid 三态、JSONL 落盘、两类查询（某天练了什么、某动作练了几次）、`POST /api/chat`、三层 trace 贯穿、四态 Verdict 与双口径报告。
+
+**尚未实现**：多轮对话与上下文指代、追问补全、部位聚合与趋势分析、鉴权限流并发、前端页面。所以它是一个**带完整评测闭环的多节点 LLM workflow**，不是自主 Agent——不做概念包装。
 
 ## 关于报告里的 100%
 
@@ -138,15 +157,22 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
 
 - [产品总览](docs/product-overview.md) · [总体计划](docs/master-plan.md) · [Phase 1 需求](docs/prd.md)
 - [Iteration 1 PRD](docs/prd-iter1-intent.md)：意图边界与十条标签决策表，业务口径唯一事实源
+- [Iteration 2 PRD](docs/prd-iter2-extract.md)：抽取字段、三态判定与写入规则
+- [Iteration 3 PRD](docs/prd-iter3-query.md)：查询口径、时间边界与 Clock 注入
+- [存储选型与企业实践差异](docs/存储选型与企业实践差异.md)：为什么用 JSONL，企业里怎么做
 - [代码实现讲解](docs/迭代一代码实现讲解.md)：每个文件为什么这么写
 - [AI 评测入口](eval/README.md) · [评测计划](eval/意图识别评测计划.md) · [Iteration 1 正式报告](eval/reports/迭代一意图识别评测报告.md)
-- [数据集设计方法](eval/methodology/意图识别数据集设计方法.md)：等价类怎么划、黄金集怎么来、blind holdout 门禁
+- [断言方法论](eval/methodology/断言方法论.md)：四问、四态、三级漏斗
+- [数据集方法论](eval/methodology/数据集方法论.md)：六步、Golden 准入、Bad Case 回流、脱敏
+- [版本演进与问题复盘](eval/reports/版本演进与问题复盘.md)：每个版本发现了什么、怎么改的
 
 ## 验证
 
 ```bash
-.venv/bin/python -m pytest -q                                          # 24 passed
-.venv/bin/python eval/run_intent_eval.py --views all --run-mode stub   # 37/37，零 token
+.venv/bin/python -m pytest -q                                          # 94 passed
+.venv/bin/python eval/run_intent_eval.py  --views all --run-mode stub  # 58/58，零 token
+.venv/bin/python eval/run_extract_eval.py --views all --run-mode stub  # 28/28
+.venv/bin/python eval/run_query_eval.py   --views all --run-mode stub  # 22/22
 ```
 
 ## 免责声明

@@ -10,6 +10,7 @@ from backend.extractor import (
 )
 from backend.llm import StubLLM
 from backend.pipeline import handle_message
+from backend.clock import FrozenClock
 from backend.storage import FakeStorage, JsonlStorage
 from backend.trace import Tracer
 
@@ -155,14 +156,24 @@ def test_multi_exercise_writes_multiple_rows():
     assert len(result["written_ids"]) == 2
 
 
-def test_non_record_intent_never_writes():
-    """query / reject 不得产生任何写入。"""
-    for intent in ("query", "reject"):
-        storage = FakeStorage()
-        router, extractor = build_llms(intent, records_json({"exercise": "卧推", "sets": 4}))
-        result = handle_message("这周卧推了几次", router, extractor, storage, Tracer())
-        assert result["stage"] == "router"
-        assert storage.read_all() == []
+def test_reject_intent_never_writes():
+    storage = FakeStorage()
+    router, extractor = build_llms("reject", records_json({"exercise": "卧推", "sets": 4}))
+    result = handle_message("卧推标准动作是什么", router, extractor, storage, Tracer())
+    assert result["stage"] == "router"
+    assert storage.read_all() == []
+
+
+def test_query_intent_never_writes():
+    """查询是只读操作，任何写入都算失败。"""
+    storage = FakeStorage()
+    router, extractor = build_llms("query", records_json({"exercise": "卧推", "sets": 4}))
+    planner = StubLLM(raw_text='{"type":"list_by_date","date":"2026-09-03"}')
+    result = handle_message(
+        "今天练了什么", router, extractor, storage, Tracer(), query_llm=planner
+    )
+    assert result["stage"] == "executor"
+    assert storage.read_all() == []
 
 
 def test_extractor_failure_writes_nothing():
@@ -186,7 +197,8 @@ def test_trace_id_spans_all_three_layers():
 
 def test_jsonl_storage_roundtrip(tmp_path):
     storage = JsonlStorage(tmp_path / "records.jsonl")
-    ids = storage.append([{"exercise": "卧推", "weight_kg": 60, "state": "complete"}], "t-1")
+    now = FrozenClock("2026-09-03T20:00:00+08:00").now()
+    ids = storage.append([{"exercise": "卧推", "weight_kg": 60, "state": "complete"}], "t-1", now)
     assert len(ids) == 1
     rows = storage.read_all()
     assert rows[0]["exercise"] == "卧推"
@@ -196,6 +208,7 @@ def test_jsonl_storage_roundtrip(tmp_path):
 
 def test_jsonl_storage_appends_without_truncating(tmp_path):
     storage = JsonlStorage(tmp_path / "records.jsonl")
-    storage.append([{"exercise": "卧推", "state": "incomplete"}], "t-1")
-    storage.append([{"exercise": "深蹲", "state": "incomplete"}], "t-2")
+    now = FrozenClock("2026-09-03T20:00:00+08:00").now()
+    storage.append([{"exercise": "卧推", "state": "incomplete"}], "t-1", now)
+    storage.append([{"exercise": "深蹲", "state": "incomplete"}], "t-2", now)
     assert len(storage.read_all()) == 2

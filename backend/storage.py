@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -17,7 +17,9 @@ RECORD_FIELDS = (
 
 
 class StorageClient(Protocol):
-    def append(self, records: list[dict[str, Any]], trace_id: str) -> list[str]: ...
+    def append(
+        self, records: list[dict[str, Any]], trace_id: str, now: datetime
+    ) -> list[str]: ...
 
     def read_all(self) -> list[dict[str, Any]]: ...
 
@@ -25,6 +27,7 @@ class StorageClient(Protocol):
 def _build_rows(
     records: list[dict[str, Any]], trace_id: str, started_at: datetime
 ) -> list[dict[str, Any]]:
+    """started_at 由调用方传入，不在此处取系统时间——时间必须可注入。"""
     rows = []
     stamp = started_at.strftime("%Y%m%d%H%M%S%f")
     for index, record in enumerate(records, start=1):
@@ -45,10 +48,12 @@ class JsonlStorage:
     def __init__(self, path: Path) -> None:
         self.path = path
 
-    def append(self, records: list[dict[str, Any]], trace_id: str) -> list[str]:
+    def append(
+        self, records: list[dict[str, Any]], trace_id: str, now: datetime
+    ) -> list[str]:
         if not records:
             return []
-        rows = _build_rows(records, trace_id, datetime.now(timezone.utc))
+        rows = _build_rows(records, trace_id, now)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         # 整行写入，规避写一半的记录
         payload = "".join(
@@ -74,10 +79,12 @@ class FakeStorage:
     def __init__(self) -> None:
         self.rows: list[dict[str, Any]] = []
 
-    def append(self, records: list[dict[str, Any]], trace_id: str) -> list[str]:
+    def append(
+        self, records: list[dict[str, Any]], trace_id: str, now: datetime
+    ) -> list[str]:
         if not records:
             return []
-        rows = _build_rows(records, trace_id, datetime.now(timezone.utc))
+        rows = _build_rows(records, trace_id, now)
         self.rows.extend(rows)
         return [row["id"] for row in rows]
 
