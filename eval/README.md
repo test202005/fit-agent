@@ -109,6 +109,44 @@ Case 最小结构：
 
 Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEEPSEEK_MODEL`。不得输出、记录或提交密钥。
 
+### 其余三个 Runner
+
+抽取、查询、工具调用共用同一套参数，只是数据集和断言不同：
+
+```bash
+.venv/bin/python eval/run_extract_eval.py --views all --run-mode stub --runs 2
+.venv/bin/python eval/run_query_eval.py   --views all --run-mode stub --runs 2
+.venv/bin/python eval/run_tool_eval.py    --views all --run-mode stub --runs 2
+```
+
+### 运行矩阵参数
+
+四个 Runner 共用 `--runs` 和 `--models`：
+
+| 参数 | 作用 | 备注 |
+|---|---|---|
+| `--runs N` | 同一套 Case 跑 N 轮 | N ≥ 2 才有稳定性口径可言 |
+| `--models a,b` | 逗号分隔的模型名，横向对比 | **仅 live 生效**；留空用 `DEEPSEEK_MODEL` |
+| `--temperature T` | 覆盖采样温度 | **仅 live 生效**；只用于稳定性专项，不用于质量验收 |
+
+```bash
+.venv/bin/python eval/run_intent_eval.py --views discovery --run-mode live \
+  --runs 3 --models deepseek-v4-flash,deepseek-v4
+```
+
+报告按 `模型 × 轮次` 分节，稳定性与成本按模型分别汇总。metadata 里的 `temperature` 记的是**实际生效值**，不是常量。
+
+`--temperature` 的唯一正当用途是验证波动检测本身：温度 0 下零波动是必然结果，证明不了检测器有效。故意升温跑一轮，看 flaky 名单会不会被填满：
+
+```bash
+.venv/bin/python eval/run_intent_eval.py --views discovery --run-mode live \
+  --runs 3 --temperature 1.5
+```
+
+升温跑出的结果**不是质量结论**，不得写进验收报告。已有一次对照实测见 [稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md) 第 4 节。
+
+注意：`run_intent_eval.py` 只要存在 REVIEW Case 就返回退出码 1（既有行为），另外三个 Runner 无此逻辑。接 CI 时不要直接用退出码判成败。
+
 ## 5. 报告怎么看
 
 报告至少同时看：
@@ -118,6 +156,19 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 - parse error、timeout 和高风险错进 `record`；
 - 每条 Case 的 expected、actual、trace_id；
 - 多次运行是否稳定，而不是只看最好的一次。
+
+「稳定性与成本」一节额外看四个数：
+
+| 指标 | 读法 |
+|---|---|
+| pass@k | k 轮至少一轮通过 = 峰值能力。**单独看它会高估** |
+| pass^k | k 轮全部通过 = 稳定可用。**这才是能不能上线的那个数** |
+| flaky | 两者之差，同一条 Case 不同轮结果不一致的名单。真正要盯的对象 |
+| token / Case | 成本量级。stub 模式恒为 0，只在 live 下成立 |
+
+高风险 Case 单独立账：关键安全行为不接受「三次里过两次」，未做到轮轮通过会在波动明细里点名。
+
+全轮 ERROR/REVIEW 的 Case 记为 unevaluated，退出分母并单独列出——不拿环境问题稀释通过率，也不让它悄悄消失。
 
 `results/` 是本地自动生成的原始证据，按 `.gitignore` 不进版本库。`reports/` 是人工核对后的正式结论，进入版本库。对外引用优先使用正式报告，但必须保留它指向的模型、Prompt、数据集和原始结果快照。
 

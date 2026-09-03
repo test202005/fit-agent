@@ -66,3 +66,13 @@ Iteration 1 验证命令：
 .venv/bin/python eval/run_intent_eval.py --views all --run-mode stub
 .venv/bin/python eval/run_intent_eval.py --views discovery --run-mode live --runs 3
 ```
+
+四个 Runner 共用 `--runs`（多轮）、`--models`（多模型横向对比）和 `--temperature`（覆盖采样温度），后两个仅 live 生效。报告按 `模型 × 轮次` 分节并汇总 pass@k / pass^k / flaky / token，metadata 记实际生效温度。口径定义见 [eval/stability.py](eval/stability.py)，读法见 [eval/README.md](eval/README.md)。
+
+`--temperature` 只用于稳定性专项——温度 0 下零波动是必然结果，证明不了波动检测有效，需要故意升温做对照。升温结果不是质量结论，不得进验收报告。
+
+```bash
+.venv/bin/python eval/run_extract_eval.py --views all --run-mode stub --runs 2
+.venv/bin/python eval/run_query_eval.py   --views all --run-mode stub --runs 2
+.venv/bin/python eval/run_tool_eval.py    --views all --run-mode stub --runs 2
+```
