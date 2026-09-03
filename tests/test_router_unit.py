@@ -247,6 +247,7 @@ def test_report_contains_case_trace_and_badcase():
         "thinking": "disabled",
         "timeout_seconds": 30.0,
         "max_retries": 0,
+        "runs": 1,
     }
     metrics = {
         "end_to_end_pass_rate": 0.0,
@@ -268,6 +269,7 @@ def test_report_contains_case_trace_and_badcase():
     }
     result = {
         "run_index": 1,
+        "model": "test-model",
         "case_id": "case-1",
         "input": "今天练了胸",
         "expected": "record",
@@ -276,9 +278,14 @@ def test_report_contains_case_trace_and_badcase():
         "verdict": "FAIL",
         "failed_checks": ["structure_failure"],
         "trace_id": "t-test",
+        "usages": [{"prompt_tokens": 30, "completion_tokens": 10, "total_tokens": 40}],
     }
 
-    report = render_report(metadata, [metrics], [result])
+    report = render_report(
+        metadata,
+        [{"model": "test-model", "run_index": 1, "metrics": metrics}],
+        [result],
+    )
 
     assert "case-1" in report
     assert "t-test" in report
@@ -291,3 +298,7 @@ def test_report_contains_case_trace_and_badcase():
     assert "断言级" in report
     assert "ERROR 2" in report
     assert "structure_failure" in report
+    # 多轮口径与成本也必须落到报告里
+    assert "pass@k" in report
+    assert "test-model · Run 1" in report
+    assert "40" in report

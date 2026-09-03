@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from backend.llm import LLMApiError, LLMClient, LLMTimeout, TEMPERATURE
+from backend.llm import LLMApiError, LLMClient, LLMTimeout, TEMPERATURE, usage_payload
 from backend.storage import RECORD_FIELDS
 from backend.trace import Tracer
 
@@ -99,7 +99,11 @@ def extract(
     tracer.emit(
         trace_id,
         "extract_response",
-        {"raw_text": llm_result.raw_text, "duration_ms": duration_ms},
+        {
+            "raw_text": llm_result.raw_text,
+            "duration_ms": duration_ms,
+            "usage": usage_payload(llm_result.usage),
+        },
         node="extractor",
     )
     try:

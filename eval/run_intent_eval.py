@@ -29,6 +29,13 @@ from backend.llm import (  # noqa: E402
 from backend.router import PROMPT_PATH, route  # noqa: E402
 from backend.trace import Tracer  # noqa: E402
 
+from eval.stability import (  # noqa: E402
+    aggregate_stability,
+    aggregate_usage,
+    collect_usages,
+    render_stability,
+)
+
 
 DATASET_PATH = ROOT / "eval" / "datasets" / "intent-dataset.jsonl"
 RESULTS_DIR = ROOT / "eval" / "results"
@@ -286,11 +293,48 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
         "trace_id": actual["trace_id"],
         "error_code": actual.get("error_code"),
         "confidence_normalized": confidence_normalized,
+        "usages": collect_usages(tracer.events),
     }
 
 
 def safe_div(numerator: int, denominator: int) -> float:
     return numerator / denominator if denominator else 0.0
+
+
+def add_matrix_args(parser: argparse.ArgumentParser) -> None:
+    """四个 Runner 共用的运行矩阵参数：跑几轮、跑哪些模型、用什么温度。"""
+    parser.add_argument("--runs", type=int, default=1)
+    parser.add_argument(
+        "--models",
+        default="",
+        help="逗号分隔的模型名，仅 live 模式生效；留空则用 DEEPSEEK_MODEL",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=None,
+        help=f"覆盖采样温度，仅 live 生效；留空用默认 {TEMPERATURE}。"
+        "升温只用于稳定性专项——验证波动检测本身抓不抓得住波动，不用于质量验收",
+    )
+
+
+def build_clients(run_mode: str, models: str, temperature: float | None = None) -> list[Any]:
+    """live 模式按 --models 造多个客户端；stub 模式只有一个占位。"""
+    if run_mode != "live":
+        return [None]
+    names = [name.strip() for name in models.split(",") if name.strip()] or [None]
+    return [LiveLLM(model=name, temperature=temperature) for name in names]
+
+
+def effective_temperature(args: argparse.Namespace) -> float:
+    """报告必须记录实际生效的温度，不能记常量——否则升温跑出来的报告是假的。"""
+    if args.run_mode != "live" or args.temperature is None:
+        return TEMPERATURE
+    return args.temperature
+
+
+def client_model(llm: Any) -> str:
+    return llm.model if llm is not None else "stub"
 
 
 def calculate_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -399,17 +443,18 @@ def render_report(
         f"- thinking: {metadata['thinking']}",
         f"- timeout_seconds: {metadata['timeout_seconds']}",
         f"- max_retries: {metadata['max_retries']}",
-        f"- runs: {len(metrics_by_run)}",
+        f"- runs: {metadata['runs']}",
         "",
         "> Stub results validate contracts only; they do not represent model quality."
         if metadata["run_mode"] == "stub"
         else "> Live results represent model behavior for this exact model, prompt and dataset snapshot.",
         "",
     ]
-    for index, metrics in enumerate(metrics_by_run, start=1):
+    for entry in metrics_by_run:
+        metrics = entry["metrics"]
         lines.extend(
             [
-                f"## Run {index}",
+                f"## {entry['model']} · Run {entry['run_index']}",
                 "",
                 "### 结果口径",
                 "",
@@ -442,17 +487,24 @@ def render_report(
         lines.append(json.dumps(metrics["confusion_matrix"], ensure_ascii=False, indent=2))
         lines.extend(["```", ""])
     lines.extend(
+        render_stability(
+            aggregate_stability(results), aggregate_usage(results), metadata["runs"]
+        )
+    )
+    lines.extend(
         [
+            "",
             "## Case results",
             "",
-            "| run | case_id | expected | actual | verdict | trace_id |",
-            "|---:|---|---|---|:---:|---|",
+            "| model | run | case_id | expected | actual | verdict | trace_id |",
+            "|---|---:|---|---|---|:---:|---|",
         ]
     )
     for result in results:
         lines.append(
-            f"| {result['run_index']} | {result['case_id']} | {result['expected']} | "
-            f"{result['actual']} | {result['verdict']} | {result['trace_id']} |"
+            f"| {result['model']} | {result['run_index']} | {result['case_id']} | "
+            f"{result['expected']} | {result['actual']} | {result['verdict']} | "
+            f"{result['trace_id']} |"
         )
     badcases = [result for result in results if not result["pass"]]
     lines.extend(["", "## Badcases", ""])
@@ -461,16 +513,17 @@ def render_report(
     else:
         lines.extend(
             [
-                "| run | case_id | input | expected | actual | verdict | 失败断言 | trace_id |",
-                "|---:|---|---|---|---|:---:|---|---|",
+                "| model | run | case_id | input | expected | actual | verdict | 失败断言 | trace_id |",
+                "|---|---:|---|---|---|---|:---:|---|---|",
             ]
         )
         for result in badcases:
             escaped_input = result["input"].replace("|", "\\|")
             lines.append(
-                f"| {result['run_index']} | {result['case_id']} | {escaped_input} | "
-                f"{result['expected']} | {result['actual']} | {result['verdict']} | "
-                f"{', '.join(result['failed_checks']) or '-'} | {result['trace_id']} |"
+                f"| {result['model']} | {result['run_index']} | {result['case_id']} | "
+                f"{escaped_input} | {result['expected']} | {result['actual']} | "
+                f"{result['verdict']} | {', '.join(result['failed_checks']) or '-'} | "
+                f"{result['trace_id']} |"
             )
     return "\n".join(lines)
 
@@ -479,7 +532,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--views", default="discovery", choices=["discovery", "locked", "regression", "all"])
     parser.add_argument("--run-mode", default="stub", choices=["stub", "live"])
-    parser.add_argument("--runs", type=int, default=1)
+    add_matrix_args(parser)
     args = parser.parse_args()
     if args.runs < 1:
         parser.error("--runs must be >= 1")
@@ -488,19 +541,28 @@ def main() -> int:
     cases = load_cases(args.views, args.run_mode)
     if not cases:
         raise SystemExit("no cases selected")
-    live_llm = LiveLLM() if args.run_mode == "live" else None
+    clients = build_clients(args.run_mode, args.models, args.temperature)
     before = snapshot([ROOT / "backend", ROOT / "eval" / "datasets"])
     all_results: list[dict[str, Any]] = []
     metrics_by_run: list[dict[str, Any]] = []
-    for run_index in range(1, args.runs + 1):
-        run_results = []
-        for case in cases:
-            result = run_case(case, args.run_mode, live_llm)
-            result["run_index"] = run_index
-            result["run_mode"] = args.run_mode
-            run_results.append(result)
-        all_results.extend(run_results)
-        metrics_by_run.append(calculate_metrics(run_results))
+    for llm in clients:
+        model_name = client_model(llm)
+        for run_index in range(1, args.runs + 1):
+            run_results = []
+            for case in cases:
+                result = run_case(case, args.run_mode, llm)
+                result["run_index"] = run_index
+                result["run_mode"] = args.run_mode
+                result["model"] = model_name
+                run_results.append(result)
+            all_results.extend(run_results)
+            metrics_by_run.append(
+                {
+                    "model": model_name,
+                    "run_index": run_index,
+                    "metrics": calculate_metrics(run_results),
+                }
+            )
 
     after = snapshot([ROOT / "backend", ROOT / "eval" / "datasets"])
     if before != after:
@@ -518,11 +580,12 @@ def main() -> int:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "view": args.views,
         "run_mode": args.run_mode,
-        "model": live_llm.model if live_llm else "stub",
+        "model": ", ".join(client_model(llm) for llm in clients),
+        "runs": args.runs,
         "git_commit": git_commit(),
         "prompt_hash": sha256_file(PROMPT_PATH),
         "dataset_hash": sha256_file(DATASET_PATH),
-        "temperature": TEMPERATURE,
+        "temperature": effective_temperature(args),
         "max_tokens": MAX_TOKENS,
         "thinking": THINKING_MODE,
         "timeout_seconds": TIMEOUT_SECONDS,

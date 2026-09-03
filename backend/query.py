@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from backend.clock import Clock, LOCAL_TZ
-from backend.llm import LLMApiError, LLMClient, LLMTimeout, TEMPERATURE
+from backend.llm import LLMApiError, LLMClient, LLMTimeout, TEMPERATURE, usage_payload
 from backend.storage import StorageClient
 from backend.trace import Tracer
 
@@ -105,7 +105,8 @@ def plan_query(
         trace_id,
         "plan_response",
         {"raw_text": result.raw_text,
-         "duration_ms": round((time.perf_counter() - started) * 1000, 2)},
+         "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+         "usage": usage_payload(result.usage)},
         node="planner",
     )
     try:

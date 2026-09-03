@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 
 TEMPERATURE = 0
@@ -24,8 +24,41 @@ class LLMApiError(Exception):
 
 
 @dataclass(frozen=True)
+class Usage:
+    """一次模型调用的 token 消耗。"""
+
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+
+    def as_payload(self) -> dict[str, int]:
+        return {
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "total_tokens": self.total_tokens,
+        }
+
+
+def usage_payload(usage: "Usage | None") -> dict[str, int] | None:
+    """成本是可观测数据，走 trace，不进业务返回结构——否则响应契约断言会被撑破。"""
+    return usage.as_payload() if usage is not None else None
+
+
+def read_usage(response: Any) -> Usage | None:
+    raw = getattr(response, "usage", None)
+    if raw is None:
+        return None
+    return Usage(
+        prompt_tokens=getattr(raw, "prompt_tokens", 0) or 0,
+        completion_tokens=getattr(raw, "completion_tokens", 0) or 0,
+        total_tokens=getattr(raw, "total_tokens", 0) or 0,
+    )
+
+
+@dataclass(frozen=True)
 class LLMResult:
     raw_text: str
+    usage: Usage | None = None
 
 
 @dataclass(frozen=True)
@@ -41,6 +74,7 @@ class ToolCallResult:
 
     tool_calls: list[ToolCall]
     text: str = ""
+    usage: Usage | None = None
 
 
 class LLMClient(Protocol):
@@ -50,13 +84,20 @@ class LLMClient(Protocol):
 
 
 class LiveLLM:
-    def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        model: str | None = None,
+        temperature: float | None = None,
+    ) -> None:
         from openai import OpenAI
 
         key = api_key or os.getenv("DEEPSEEK_API_KEY")
         if not key:
             raise ValueError("DEEPSEEK_API_KEY is not configured")
         self.model = model or os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
+        # 默认沿用全局 0；只有稳定性专项需要故意升温制造波动，用来验证波动检测本身
+        self.temperature = TEMPERATURE if temperature is None else temperature
         self._client = OpenAI(
             api_key=key,
             base_url="https://api.deepseek.com",
@@ -75,7 +116,7 @@ class LiveLLM:
                     {"role": "user", "content": user_text},
                 ],
                 response_format={"type": "json_object"},
-                temperature=TEMPERATURE,
+                temperature=self.temperature,
                 max_tokens=MAX_TOKENS,
                 extra_body={"thinking": {"type": THINKING_MODE}},
             )
@@ -84,7 +125,7 @@ class LiveLLM:
         except APIError as exc:
             raise LLMApiError from exc
         content = response.choices[0].message.content
-        return LLMResult(raw_text=content or "")
+        return LLMResult(raw_text=content or "", usage=read_usage(response))
 
     def complete_with_tools(
         self, system_prompt: str, user_text: str, tools: list[dict]
@@ -99,7 +140,7 @@ class LiveLLM:
                     {"role": "user", "content": user_text},
                 ],
                 tools=tools,
-                temperature=TEMPERATURE,
+                temperature=self.temperature,
                 max_tokens=MAX_TOOL_TOKENS,
                 extra_body={"thinking": {"type": THINKING_MODE}},
             )
@@ -124,7 +165,9 @@ class LiveLLM:
                     raw_arguments=raw,
                 )
             )
-        return ToolCallResult(tool_calls=calls, text=message.content or "")
+        return ToolCallResult(
+            tool_calls=calls, text=message.content or "", usage=read_usage(response)
+        )
 
 
 class StubLLM:
@@ -134,12 +177,15 @@ class StubLLM:
         fault: str | None = None,
         tool_calls: list[ToolCall] | None = None,
         text: str = "",
+        usage: Usage | None = None,
     ) -> None:
         self.model = "stub"
         self._raw_text = raw_text
         self._fault = fault
         self._tool_calls = tool_calls or []
         self._text = text
+        # 默认不带 usage：stub 不花 token，成本口径只在 live 下成立
+        self._usage = usage
 
     def complete(self, system_prompt: str, user_text: str) -> LLMResult:
         if self._fault == "llm_timeout":
@@ -147,8 +193,8 @@ class StubLLM:
         if self._fault == "llm_api_error":
             raise LLMApiError
         if self._fault == "llm_parse_error":
-            return LLMResult(raw_text="not-json")
-        return LLMResult(raw_text=self._raw_text)
+            return LLMResult(raw_text="not-json", usage=self._usage)
+        return LLMResult(raw_text=self._raw_text, usage=self._usage)
 
     def complete_with_tools(
         self, system_prompt: str, user_text: str, tools: list[dict]
@@ -157,4 +203,6 @@ class StubLLM:
             raise LLMTimeout
         if self._fault == "llm_api_error":
             raise LLMApiError
-        return ToolCallResult(tool_calls=list(self._tool_calls), text=self._text)
+        return ToolCallResult(
+            tool_calls=list(self._tool_calls), text=self._text, usage=self._usage
+        )

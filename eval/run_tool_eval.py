@@ -34,11 +34,21 @@ from backend.trace import Tracer  # noqa: E402
 from eval.run_intent_eval import (  # noqa: E402
     RESULTS_DIR,
     TRACE_PATH,
+    add_matrix_args,
+    build_clients,
+    client_model,
+    effective_temperature,
     git_commit,
     load_dotenv,
     safe_div,
     sha256_file,
     snapshot,
+)
+from eval.stability import (  # noqa: E402
+    aggregate_stability,
+    aggregate_usage,
+    collect_usages,
+    render_stability,
 )
 
 
@@ -195,6 +205,7 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
         "assertion_total": len(all_checks),
         "assertion_passed": sum(1 for c in all_checks if c["pass"]),
         "trace_id": result.get("trace_id"),
+        "usages": collect_usages(tracer.events),
     }
 
 
@@ -236,12 +247,13 @@ def render_report(metadata, metrics_by_run, results) -> str:
         f"- dataset_hash: {metadata['dataset_hash']}",
         f"- temperature: {metadata['temperature']}",
         f"- max_tool_calls: {MAX_TOOL_CALLS}",
-        f"- runs: {len(metrics_by_run)}", "",
+        f"- runs: {metadata['runs']}", "",
         "> stub 只验证编排与断言；模型的工具选择能力只在 live 模式下体现。", "",
     ]
-    for i, m in enumerate(metrics_by_run, start=1):
+    for entry in metrics_by_run:
+        m = entry["metrics"]
         lines.extend([
-            f"## Run {i}", "", "### 结果口径", "",
+            f"## {entry['model']} · Run {entry['run_index']}", "", "### 结果口径", "",
             f"- 【核心结果】Case 级 {m['case_pass_rate']:.4f}"
             f"（PASS {m['verdicts']['PASS']} / FAIL {m['verdicts']['FAIL']}）",
             f"- 【断言明细】断言级 {m['assertion_pass_rate']:.4f}"
@@ -255,12 +267,18 @@ def render_report(metadata, metrics_by_run, results) -> str:
             "### 工具选择混淆矩阵（首个工具）", "", "```json",
             json.dumps(m["tool_confusion"], ensure_ascii=False, indent=2), "```", "",
         ])
-    lines.extend(["## Case results", "",
-        "| run | case_id | 期望工具 | 实际 | 数量 期望/实际 | 首个分歧 | verdict | 失败断言 | trace_id |",
-        "|---:|---|---|---|---|:---:|:---:|---|---|"])
+    lines.extend(
+        render_stability(
+            aggregate_stability(results), aggregate_usage(results), metadata["runs"]
+        )
+    )
+    lines.extend(["", "## Case results", "",
+        "| model | run | case_id | 期望工具 | 实际 | 数量 期望/实际 | 首个分歧 | verdict | 失败断言 | trace_id |",
+        "|---|---:|---|---|---|---|:---:|:---:|---|---|"])
     for r in results:
         lines.append(
-            f"| {r['run_index']} | {r['case_id']} | {'+'.join(r['expected_tools']) or '无'} | "
+            f"| {r['model']} | {r['run_index']} | {r['case_id']} | "
+            f"{'+'.join(r['expected_tools']) or '无'} | "
             f"{'+'.join(r['actual_tools']) or '无'} | {r['expected_tool_count']}/{r['actual_tool_count']} | "
             f"{r['first_divergence_step'] or '-'} | {r['verdict']} | "
             f"{', '.join(r['failed_checks']) or '-'} | {r['trace_id']} |"
@@ -270,10 +288,11 @@ def render_report(metadata, metrics_by_run, results) -> str:
     if not bad:
         lines.append("None.")
     else:
-        lines.extend(["| run | case_id | input | 首个分歧步骤 | 失败断言 |", "|---:|---|---|:---:|---|"])
+        lines.extend(["| model | run | case_id | input | 首个分歧步骤 | 失败断言 |",
+                      "|---|---:|---|---|:---:|---|"])
         for r in bad:
             lines.append(
-                f"| {r['run_index']} | {r['case_id']} | {r['input']} | "
+                f"| {r['model']} | {r['run_index']} | {r['case_id']} | {r['input']} | "
                 f"{r['first_divergence_step'] or '-'} | {', '.join(r['failed_checks']) or '-'} |"
             )
     return "\n".join(lines)
@@ -284,7 +303,7 @@ def main() -> int:
     parser.add_argument("--views", default="discovery",
                         choices=["discovery", "locked", "regression", "all"])
     parser.add_argument("--run-mode", default="stub", choices=["stub", "live"])
-    parser.add_argument("--runs", type=int, default=1)
+    add_matrix_args(parser)
     args = parser.parse_args()
     if args.runs < 1:
         parser.error("--runs must be >= 1")
@@ -293,18 +312,25 @@ def main() -> int:
     cases = load_cases(args.views)
     if not cases:
         raise SystemExit("no cases selected")
-    live_llm = LiveLLM() if args.run_mode == "live" else None
+    clients = build_clients(args.run_mode, args.models, args.temperature)
 
     before = snapshot([ROOT / "backend", ROOT / "eval" / "datasets"])
     all_results, metrics_by_run = [], []
-    for run_index in range(1, args.runs + 1):
-        run_results = []
-        for case in cases:
-            r = run_case(case, args.run_mode, live_llm)
-            r["run_index"] = run_index
-            run_results.append(r)
-        all_results.extend(run_results)
-        metrics_by_run.append(calculate_metrics(run_results))
+    for llm in clients:
+        model_name = client_model(llm)
+        for run_index in range(1, args.runs + 1):
+            run_results = []
+            for case in cases:
+                r = run_case(case, args.run_mode, llm)
+                r["run_index"] = run_index
+                r["model"] = model_name
+                run_results.append(r)
+            all_results.extend(run_results)
+            metrics_by_run.append({
+                "model": model_name,
+                "run_index": run_index,
+                "metrics": calculate_metrics(run_results),
+            })
     if before != snapshot([ROOT / "backend", ROOT / "eval" / "datasets"]):
         raise SystemExit("unexpected business file write detected")
 
@@ -316,9 +342,11 @@ def main() -> int:
         "\n".join(json.dumps(r, ensure_ascii=False) for r in all_results) + "\n", encoding="utf-8")
     metadata = {
         "generated_at": datetime.now(timezone.utc).isoformat(), "view": args.views,
-        "run_mode": args.run_mode, "model": live_llm.model if live_llm else "stub",
+        "run_mode": args.run_mode,
+        "model": ", ".join(client_model(llm) for llm in clients),
+        "runs": args.runs,
         "git_commit": git_commit(), "agent_prompt_hash": sha256_file(AGENT_PROMPT_PATH),
-        "dataset_hash": sha256_file(DATASET_PATH), "temperature": TEMPERATURE,
+        "dataset_hash": sha256_file(DATASET_PATH), "temperature": effective_temperature(args),
         "max_tokens": MAX_TOOL_TOKENS, "thinking": THINKING_MODE,
         "timeout_seconds": TIMEOUT_SECONDS, "max_retries": MAX_RETRIES,
     }

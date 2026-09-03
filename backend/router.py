@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from backend.llm import LLMApiError, LLMClient, LLMTimeout, TEMPERATURE
+from backend.llm import LLMApiError, LLMClient, LLMTimeout, TEMPERATURE, usage_payload
 from backend.trace import Tracer
 
 
@@ -83,7 +83,11 @@ def route(text: str, llm: LLMClient, tracer: Tracer) -> dict[str, Any]:
     tracer.emit(
         trace_id,
         "llm_response",
-        {"raw_text": llm_result.raw_text, "duration_ms": duration_ms},
+        {
+            "raw_text": llm_result.raw_text,
+            "duration_ms": duration_ms,
+            "usage": usage_payload(llm_result.usage),
+        },
     )
     try:
         intent, confidence, confidence_normalized = _parse_router_output_details(

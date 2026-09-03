@@ -33,11 +33,21 @@ from backend.trace import Tracer  # noqa: E402
 from eval.run_intent_eval import (  # noqa: E402
     RESULTS_DIR,
     TRACE_PATH,
+    add_matrix_args,
+    build_clients,
+    client_model,
+    effective_temperature,
     git_commit,
     load_dotenv,
     safe_div,
     sha256_file,
     snapshot,
+)
+from eval.stability import (  # noqa: E402
+    aggregate_stability,
+    aggregate_usage,
+    collect_usages,
+    render_stability,
 )
 
 
@@ -223,6 +233,7 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
         "assertion_passed": sum(1 for check in all_checks if check["pass"]),
         "stage": actual.get("stage"),
         "trace_id": actual.get("trace_id"),
+        "usages": collect_usages(tracer.events),
     }
 
 
@@ -272,17 +283,18 @@ def render_report(
         f"- dataset_hash: {metadata['dataset_hash']}",
         f"- temperature: {metadata['temperature']}",
         f"- max_tokens: {metadata['max_tokens']}",
-        f"- runs: {len(metrics_by_run)}",
+        f"- runs: {metadata['runs']}",
         "",
         "> Stub 结果只验证编排与契约，不代表抽取质量。"
         if metadata["run_mode"] == "stub"
         else "> Live 结果代表该模型、该 Prompt、该数据集快照下的抽取行为。",
         "",
     ]
-    for index, metrics in enumerate(metrics_by_run, start=1):
+    for entry in metrics_by_run:
+        metrics = entry["metrics"]
         lines.extend(
             [
-                f"## Run {index}",
+                f"## {entry['model']} · Run {entry['run_index']}",
                 "",
                 "### 结果口径",
                 "",
@@ -307,16 +319,23 @@ def render_report(
             ]
         )
     lines.extend(
+        render_stability(
+            aggregate_stability(results), aggregate_usage(results), metadata["runs"]
+        )
+    )
+    lines.extend(
         [
+            "",
             "## Case results",
             "",
-            "| run | case_id | expected_state | actual | 写入 期望/实际 | verdict | 失败断言 | trace_id |",
-            "|---:|---|---|---|---|:---:|---|---|",
+            "| model | run | case_id | expected_state | actual | 写入 期望/实际 | verdict | 失败断言 | trace_id |",
+            "|---|---:|---|---|---|---|:---:|---|---|",
         ]
     )
     for result in results:
         lines.append(
-            f"| {result['run_index']} | {result['case_id']} | {result['expected_state']} | "
+            f"| {result['model']} | {result['run_index']} | {result['case_id']} | "
+            f"{result['expected_state']} | "
             f"{result['actual_state']} | {result['expected_write_count']}/{result['actual_write_count']} | "
             f"{result['verdict']} | {', '.join(result['failed_checks']) or '-'} | {result['trace_id']} |"
         )
@@ -325,11 +344,11 @@ def render_report(
     if not badcases:
         lines.append("None.")
     else:
-        lines.extend(["| run | case_id | input | 失败断言 |", "|---:|---|---|---|"])
+        lines.extend(["| model | run | case_id | input | 失败断言 |", "|---|---:|---|---|---|"])
         for result in badcases:
             escaped = result["input"].replace("|", "\\|")
             lines.append(
-                f"| {result['run_index']} | {result['case_id']} | {escaped} | "
+                f"| {result['model']} | {result['run_index']} | {result['case_id']} | {escaped} | "
                 f"{', '.join(result['failed_checks']) or '-'} |"
             )
     return "\n".join(lines)
@@ -341,7 +360,7 @@ def main() -> int:
         "--views", default="discovery", choices=["discovery", "locked", "regression", "all"]
     )
     parser.add_argument("--run-mode", default="stub", choices=["stub", "live"])
-    parser.add_argument("--runs", type=int, default=1)
+    add_matrix_args(parser)
     args = parser.parse_args()
     if args.runs < 1:
         parser.error("--runs must be >= 1")
@@ -350,19 +369,26 @@ def main() -> int:
     cases = load_cases(args.views)
     if not cases:
         raise SystemExit("no cases selected")
-    live_llm = LiveLLM() if args.run_mode == "live" else None
+    clients = build_clients(args.run_mode, args.models, args.temperature)
 
     before = snapshot([ROOT / "backend", ROOT / "eval" / "datasets"])
     all_results: list[dict[str, Any]] = []
     metrics_by_run: list[dict[str, Any]] = []
-    for run_index in range(1, args.runs + 1):
-        run_results = []
-        for case in cases:
-            result = run_case(case, args.run_mode, live_llm)
-            result["run_index"] = run_index
-            run_results.append(result)
-        all_results.extend(run_results)
-        metrics_by_run.append(calculate_metrics(run_results))
+    for llm in clients:
+        model_name = client_model(llm)
+        for run_index in range(1, args.runs + 1):
+            run_results = []
+            for case in cases:
+                result = run_case(case, args.run_mode, llm)
+                result["run_index"] = run_index
+                result["model"] = model_name
+                run_results.append(result)
+            all_results.extend(run_results)
+            metrics_by_run.append({
+                "model": model_name,
+                "run_index": run_index,
+                "metrics": calculate_metrics(run_results),
+            })
     after = snapshot([ROOT / "backend", ROOT / "eval" / "datasets"])
     if before != after:
         raise SystemExit("unexpected business file write detected")
@@ -379,12 +405,13 @@ def main() -> int:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "view": args.views,
         "run_mode": args.run_mode,
-        "model": live_llm.model if live_llm else "stub",
+        "model": ", ".join(client_model(llm) for llm in clients),
+        "runs": args.runs,
         "git_commit": git_commit(),
         "router_prompt_hash": sha256_file(ROUTER_PROMPT_PATH),
         "extract_prompt_hash": sha256_file(EXTRACT_PROMPT_PATH),
         "dataset_hash": sha256_file(DATASET_PATH),
-        "temperature": TEMPERATURE,
+        "temperature": effective_temperature(args),
         "max_tokens": MAX_TOKENS,
         "thinking": THINKING_MODE,
         "timeout_seconds": TIMEOUT_SECONDS,

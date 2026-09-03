@@ -33,11 +33,21 @@ from backend.trace import Tracer  # noqa: E402
 from eval.run_intent_eval import (  # noqa: E402
     RESULTS_DIR,
     TRACE_PATH,
+    add_matrix_args,
+    build_clients,
+    client_model,
+    effective_temperature,
     git_commit,
     load_dotenv,
     safe_div,
     sha256_file,
     snapshot,
+)
+from eval.stability import (  # noqa: E402
+    aggregate_stability,
+    aggregate_usage,
+    collect_usages,
+    render_stability,
 )
 
 
@@ -221,6 +231,7 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
         "assertion_passed": sum(1 for c in all_checks if c["pass"]),
         "stage": actual.get("stage"),
         "trace_id": actual.get("trace_id"),
+        "usages": collect_usages(tracer.events),
     }
 
 
@@ -263,15 +274,16 @@ def render_report(metadata, metrics_by_run, results) -> str:
         f"- planner_prompt_hash: {metadata['planner_prompt_hash']}",
         f"- dataset_hash: {metadata['dataset_hash']}",
         f"- temperature: {metadata['temperature']}",
-        f"- runs: {len(metrics_by_run)}",
+        f"- runs: {metadata['runs']}",
         "",
         "> 每条 Case 自带 fixture 与 now，时间已冻结，结果可复现。",
         "",
     ]
-    for index, m in enumerate(metrics_by_run, start=1):
+    for entry in metrics_by_run:
+        m = entry["metrics"]
         lines.extend(
             [
-                f"## Run {index}",
+                f"## {entry['model']} · Run {entry['run_index']}",
                 "",
                 "### 结果口径",
                 "",
@@ -296,16 +308,23 @@ def render_report(metadata, metrics_by_run, results) -> str:
             ]
         )
     lines.extend(
+        render_stability(
+            aggregate_stability(results), aggregate_usage(results), metadata["runs"]
+        )
+    )
+    lines.extend(
         [
+            "",
             "## Case results",
             "",
-            "| run | case_id | now | expected_type | actual | 条数 期望/实际 | verdict | 失败断言 | trace_id |",
-            "|---:|---|---|---|---|---|:---:|---|---|",
+            "| model | run | case_id | now | expected_type | actual | 条数 期望/实际 | verdict | 失败断言 | trace_id |",
+            "|---|---:|---|---|---|---|---|:---:|---|---|",
         ]
     )
     for r in results:
         lines.append(
-            f"| {r['run_index']} | {r['case_id']} | {r['now'][:10]} | {r['expected_type']} | "
+            f"| {r['model']} | {r['run_index']} | {r['case_id']} | {r['now'][:10]} | "
+            f"{r['expected_type']} | "
             f"{r['actual_type']} | {r['expected_count']}/{r['actual_count']} | {r['verdict']} | "
             f"{', '.join(r['failed_checks']) or '-'} | {r['trace_id']} |"
         )
@@ -314,10 +333,10 @@ def render_report(metadata, metrics_by_run, results) -> str:
     if not badcases:
         lines.append("None.")
     else:
-        lines.extend(["| run | case_id | input | 失败断言 |", "|---:|---|---|---|"])
+        lines.extend(["| model | run | case_id | input | 失败断言 |", "|---|---:|---|---|---|"])
         for r in badcases:
             lines.append(
-                f"| {r['run_index']} | {r['case_id']} | {r['input']} | "
+                f"| {r['model']} | {r['run_index']} | {r['case_id']} | {r['input']} | "
                 f"{', '.join(r['failed_checks']) or '-'} |"
             )
     return "\n".join(lines)
@@ -329,7 +348,7 @@ def main() -> int:
         "--views", default="discovery", choices=["discovery", "locked", "regression", "all"]
     )
     parser.add_argument("--run-mode", default="stub", choices=["stub", "live"])
-    parser.add_argument("--runs", type=int, default=1)
+    add_matrix_args(parser)
     args = parser.parse_args()
     if args.runs < 1:
         parser.error("--runs must be >= 1")
@@ -338,18 +357,25 @@ def main() -> int:
     cases = load_cases(args.views)
     if not cases:
         raise SystemExit("no cases selected")
-    live_llm = LiveLLM() if args.run_mode == "live" else None
+    clients = build_clients(args.run_mode, args.models, args.temperature)
 
     before = snapshot([ROOT / "backend", ROOT / "eval" / "datasets"])
     all_results, metrics_by_run = [], []
-    for run_index in range(1, args.runs + 1):
-        run_results = []
-        for case in cases:
-            result = run_case(case, args.run_mode, live_llm)
-            result["run_index"] = run_index
-            run_results.append(result)
-        all_results.extend(run_results)
-        metrics_by_run.append(calculate_metrics(run_results))
+    for llm in clients:
+        model_name = client_model(llm)
+        for run_index in range(1, args.runs + 1):
+            run_results = []
+            for case in cases:
+                result = run_case(case, args.run_mode, llm)
+                result["run_index"] = run_index
+                result["model"] = model_name
+                run_results.append(result)
+            all_results.extend(run_results)
+            metrics_by_run.append({
+                "model": model_name,
+                "run_index": run_index,
+                "metrics": calculate_metrics(run_results),
+            })
     after = snapshot([ROOT / "backend", ROOT / "eval" / "datasets"])
     if before != after:
         raise SystemExit("unexpected business file write detected")
@@ -365,12 +391,13 @@ def main() -> int:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "view": args.views,
         "run_mode": args.run_mode,
-        "model": live_llm.model if live_llm else "stub",
+        "model": ", ".join(client_model(llm) for llm in clients),
+        "runs": args.runs,
         "git_commit": git_commit(),
         "router_prompt_hash": sha256_file(ROUTER_PROMPT_PATH),
         "planner_prompt_hash": sha256_file(PLANNER_PROMPT_PATH),
         "dataset_hash": sha256_file(DATASET_PATH),
-        "temperature": TEMPERATURE,
+        "temperature": effective_temperature(args),
         "max_tokens": MAX_TOKENS,
         "thinking": THINKING_MODE,
         "timeout_seconds": TIMEOUT_SECONDS,

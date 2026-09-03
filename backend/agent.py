@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from backend.clock import Clock
-from backend.llm import LLMApiError, LLMTimeout, TEMPERATURE
+from backend.llm import LLMApiError, LLMTimeout, TEMPERATURE, usage_payload
 from backend.storage import StorageClient
 from backend.tools import TOOL_NAMES, TOOL_SCHEMAS, ToolError, make_executors
 from backend.trace import Tracer
@@ -68,6 +68,7 @@ def run_agent(
             ],
             "text_len": len(decision.text),
             "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+            "usage": usage_payload(decision.usage),
         },
         node="agent",
     )
