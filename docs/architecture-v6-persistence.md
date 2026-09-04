@@ -40,7 +40,9 @@ HTTP / Tool Use / Pipeline / Query
 - `request_id`：重试幂等的技术标识；缺省由服务端生成；
 - `trace_id`：仍然只负责一次执行轨迹追踪，不作为幂等键或业务主键。
 
-同一 `request_id` 的重试是否返回原结果或返回“已处理”，在实现时保持明确且可测试；不同 `request_id` 即使文本相同，也不按文本去重。
+`user_id` 由 HTTP 请求上下文传给 Pipeline，不进入模型 Prompt，也不允许模型通过 Tool 参数生成或修改。本轮使用客户端传入的 `user_id` 验证数据作用域，它不是经过认证的用户身份，因此不能据此宣称系统已完成鉴权和权限控制。
+
+同一用户的同一 `request_id` 重试时不重复写入，返回第一次写入的 `written_ids`，并在业务返回中标记 `idempotent_replay: true`。不同 `request_id` 即使文本相同，也按两次独立请求处理。客户端未提供 `request_id` 时由服务端生成；这类请求再次发送会获得新的 ID，因此不具备跨请求重试幂等能力。
 
 ## 4. Storage 接口
 
@@ -54,15 +56,21 @@ read_all()
 V6 最小扩展：
 
 ```python
+@dataclass(frozen=True)
+class StorageWriteResult:
+    written_ids: list[str]
+    idempotent_replay: bool
+
+
 append(
     records,
     trace_id,
     now,
     user_id="demo-user",
     request_id=None,
-) -> list[str]
+) -> StorageWriteResult
 
-read_all(user_id=None) -> list[dict]
+read_all(user_id: str) -> list[dict]
 ```
 
 兼容要求：
@@ -70,8 +78,11 @@ read_all(user_id=None) -> list[dict]
 - FakeStorage 和 JsonlStorage 接受新增上下文，不改变原有测试意图；
 - `user_id` 进入每条持久化记录；
 - `request_id` 在独立的 `write_requests` 表中用于同一批写入的幂等约束；一条请求可以对应多条训练记录；
+- Pipeline 将 `StorageWriteResult` 中的 `written_ids` 和 `idempotent_replay` 原样放入业务返回，不自行推断是否重放；
 - `append` 一次接收的多条记录属于同一事务单元；
-- Query Executor 必须使用当前用户范围读取，不允许先读全量再由上层过滤。
+- 业务侧 `read_all` 必须显式传入 `user_id`，不提供默认全量读取；测试如需检查全库，使用 SQLite 测试辅助方法直接查询；
+- Query Executor 必须使用当前用户范围读取，不允许先读全量再由上层过滤；
+- 记录 `id` 使用 UUID 生成，不复用业务时间、`trace_id` 或 `request_id`。
 
 ## 5. SQLite 最小 Schema
 
@@ -79,9 +90,10 @@ read_all(user_id=None) -> list[dict]
 CREATE TABLE workout_records (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    request_id TEXT,
+    request_id TEXT NOT NULL,
     trace_id TEXT NOT NULL,
     ts TEXT NOT NULL,
+    created_at TEXT NOT NULL,
     state TEXT NOT NULL,
     exercise TEXT,
     weight_kg REAL,
@@ -100,9 +112,12 @@ CREATE TABLE write_requests (
 
 CREATE INDEX ix_workout_records_user_ts
 ON workout_records(user_id, ts);
+
+CREATE INDEX ix_workout_records_user_request
+ON workout_records(user_id, request_id);
 ```
 
-Schema 只复用当前 `RECORD_FIELDS` 和 `state` 协议。启动时使用 `CREATE TABLE IF NOT EXISTS` 初始化；本轮不实现完整迁移平台。
+Schema 只复用当前 `RECORD_FIELDS` 和 `state` 协议。`ts` 表示用户训练发生的业务时间，继续受 Frozen Clock 控制；`created_at` 表示数据库实际写入时间，用于追踪和排障。启动时使用 `CREATE TABLE IF NOT EXISTS` 初始化；本轮不实现完整迁移平台。
 
 ## 6. 事务与幂等行为
 
@@ -116,7 +131,9 @@ Schema 只复用当前 `RECORD_FIELDS` 和 `state` 协议。启动时使用 `CRE
 → 成功后提交
 ```
 
-幂等只针对显式 `request_id`，不根据自然语言文本、时间或动作名称猜测重复请求。若登记发现同一请求已处理，则读取该请求已提交的记录并返回既定结果，不再次写入。具体重复请求返回结构必须与当前业务错误协议保持一致，并由测试先固定 expected。
+幂等只针对客户端显式传入的 `request_id`，不根据自然语言文本、时间或动作名称猜测重复请求。若登记发现同一用户的同一请求已处理，则按 `(user_id, request_id)` 读取已提交记录，返回第一次写入的 `written_ids` 和 `idempotent_replay: true`，不再次写入。首次成功写入返回 `idempotent_replay: false`。
+
+SQLite 每次 Storage 操作创建独立连接，设置有限的 `busy_timeout`，在事务提交或回滚后关闭；本轮不引入连接池。数据库锁等待超时或事务异常作为存储错误记录到 Trace，并由 HTTP 统一映射为当前 `internal_error`，不向调用方暴露 SQL 和堆栈。
 
 JsonlStorage 不强行模拟 SQLite 的事务和唯一约束；它作为教学/对照实现保留现有行为，SQLite 专项测试只对 SQLite 的真实能力负责。
 
