@@ -52,7 +52,7 @@ POST /api/chat {text}
 | `backend/query.py` | Planner（LLM 翻译条件）+ Executor（纯代码执行） |
 | `backend/agent.py` | 工具调用循环，单轮上限 3 次 |
 | `backend/tools.py` | 工具定义、参数校验、执行器工厂 |
-| `backend/storage.py` | `StorageClient` Protocol + JsonlStorage / FakeStorage |
+| `backend/storage.py` | `StorageClient` Protocol + SQLiteStorage / JsonlStorage / FakeStorage |
 | `backend/clock.py` | `Clock` Protocol + SystemClock / FrozenClock |
 | `backend/llm.py` | LLM 统一入口，含工具调用；LiveLLM / StubLLM |
 | `backend/trace.py` | traceId + 结构化日志 |
@@ -62,9 +62,9 @@ POST /api/chat {text}
 **三个统一入口，三对真假实现**——判据：任何让测试变慢、变贵或不确定的依赖，都必须能被替换掉。
 
 ```
-LLMClient  →  LiveLLM      / StubLLM
-Storage    →  JsonlStorage / FakeStorage
-Clock      →  SystemClock  / FrozenClock
+LLMClient  →  LiveLLM       / StubLLM
+Storage    →  SQLiteStorage / JsonlStorage / FakeStorage
+Clock      →  SystemClock   / FrozenClock
 ```
 
 ### record 三态协议（Phase 1 定死，Phase 2 复用）
@@ -133,7 +133,7 @@ invalid       内容矛盾/无法解析 → 不落盘
 
 | 方向 | 为什么 | 大致范围 |
 |---|---|---|
-| **V6 SQLite 持久化与数据一致性** | Agent 已经产生真实记录，需要补企业级状态基础 | 默认本地 SQLite；验证持久化、隔离、事务、重复请求和恢复，达到可用可测即收口 |
+| **V6 SQLite 持久化与数据一致性** | Agent 已经产生真实记录，需要补企业级状态基础 | **已完成**：默认本地 SQLite；已验证持久化、隔离、事务、重复请求和恢复 |
 
 两模型受控对比已于 V5.1 完成，结果见[两模型受控对比评测报告](../eval/reports/两模型受控对比评测报告.md)。下一轮 PRD 见[V6 SQLite 持久化与数据一致性](prd-v6-persistence.md)。
 
