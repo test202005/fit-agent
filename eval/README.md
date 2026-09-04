@@ -17,6 +17,8 @@
 
 当前共有四套评测：意图识别、抽取与受控写入、查询规划与执行、单轮 Tool Use。多步 Agent Loop 和多轮 Memory 尚未实现，因此当前不评测跨步骤推理或跨轮记忆。
 
+业务默认运行实现已切换为本地 SQLite；评测仍通过 FakeStorage/Stub 保持零 token 和确定性。SQLite 的持久化、隔离、事务、幂等和重启恢复由 `tests/test_storage_sqlite.py` 覆盖，不混入模型质量指标。
+
 ## 2. 目录导航
 
 ```text

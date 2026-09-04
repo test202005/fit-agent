@@ -135,8 +135,10 @@ def _sort_desc(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(rows, key=lambda row: row["ts"], reverse=True)
 
 
-def execute_plan(plan: dict[str, Any], storage: StorageClient) -> dict[str, Any]:
-    rows = storage.read_all()
+def execute_plan(
+    plan: dict[str, Any], storage: StorageClient, user_id: str = "demo-user"
+) -> dict[str, Any]:
+    rows = storage.read_all(user_id)
     if plan["type"] == "unsupported":
         return {"records": [], "count": 0, "supported": False}
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from backend.clock import Clock, SystemClock
@@ -19,10 +20,13 @@ def handle_message(
     tracer: Tracer,
     query_llm: LLMClient | None = None,
     clock: Clock | None = None,
+    user_id: str = "demo-user",
+    request_id: str | None = None,
 ) -> dict[str, Any]:
     """router -> extractor/planner -> storage 编排。同一 trace_id 贯穿全链路。"""
     clock = clock or SystemClock()
     query_llm = query_llm or extractor_llm
+    request_id = request_id or f"server-{uuid.uuid4().hex}"
 
     routed = route(text, router_llm, tracer)
     trace_id = routed["trace_id"]
@@ -30,9 +34,14 @@ def handle_message(
         return {**routed, "stage": "router"}
 
     if routed["intent"] == "record":
-        return _handle_record(text, extractor_llm, storage, tracer, trace_id, routed, clock)
+        return _handle_record(
+            text, extractor_llm, storage, tracer, trace_id, routed, clock,
+            user_id, request_id,
+        )
     if routed["intent"] == "query":
-        return _handle_query(text, query_llm, storage, tracer, trace_id, routed, clock)
+        return _handle_query(
+            text, query_llm, storage, tracer, trace_id, routed, clock, user_id,
+        )
     return {**routed, "stage": "router"}
 
 
@@ -44,6 +53,8 @@ def _handle_record(
     trace_id: str,
     routed: dict[str, Any],
     clock: Clock,
+    user_id: str,
+    request_id: str,
 ) -> dict[str, Any]:
     extracted = extract(text, llm, tracer, trace_id)
     if not extracted["ok"]:
@@ -55,9 +66,16 @@ def _handle_record(
     tracer.emit(
         trace_id, "write_attempted", {"state": state, "count": len(to_write)}, node="storage"
     )
-    written_ids = storage.append(to_write, trace_id, clock.now())
+    write_result = storage.append(to_write, trace_id, clock.now(), user_id, request_id)
+    written_ids = write_result.written_ids
     tracer.emit(
-        trace_id, "write_result", {"written": len(written_ids), "ids": written_ids}, node="storage"
+        trace_id, "write_result",
+        {
+            "written": len(written_ids),
+            "ids": written_ids,
+            "idempotent_replay": write_result.idempotent_replay,
+        },
+        node="storage",
     )
     return {
         "ok": True,
@@ -67,6 +85,7 @@ def _handle_record(
         "state": state,
         "records": extracted["records"],
         "written_ids": written_ids,
+        "idempotent_replay": write_result.idempotent_replay,
     }
 
 
@@ -78,6 +97,7 @@ def _handle_query(
     trace_id: str,
     routed: dict[str, Any],
     clock: Clock,
+    user_id: str,
 ) -> dict[str, Any]:
     planned = plan_query(text, llm, tracer, trace_id, clock)
     if not planned["ok"]:
@@ -85,7 +105,7 @@ def _handle_query(
 
     plan = planned["plan"]
     # 执行是纯代码：查询错了要能分清是没听懂用户，还是查错了数据
-    outcome = execute_plan(plan, storage)
+    outcome = execute_plan(plan, storage, user_id=user_id)
     tracer.emit(
         trace_id,
         "query_executed",

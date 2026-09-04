@@ -28,6 +28,8 @@ def run_agent(
     tracer: Tracer,
     clock: Clock,
     trace_id: str,
+    user_id: str = "demo-user",
+    request_id: str | None = None,
 ) -> dict[str, Any]:
     """单轮工具调用：模型选工具 → 执行 → 回执。不做多步循环（留给 iter-5）。"""
     system_prompt, prompt_hash = load_prompt()
@@ -87,7 +89,7 @@ def run_agent(
             "error_code": "too_many_tool_calls",
         }
 
-    executors = make_executors(storage, clock, trace_id)
+    executors = make_executors(storage, clock, trace_id, user_id, request_id)
     trajectory: list[dict[str, Any]] = []
     for index, call in enumerate(decision.tool_calls, start=1):
         step: dict[str, Any] = {

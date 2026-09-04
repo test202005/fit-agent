@@ -52,7 +52,7 @@ DEEPSEEK_MODEL="deepseek-v4-flash"
 ```bash
 .venv/bin/python -m backend.app          # 默认 5001 端口
 curl -X POST localhost:5001/api/chat -H 'Content-Type: application/json' \
-     -d '{"text":"今天卧推60kg做了4组每组8次"}'
+     -d '{"text":"今天卧推60kg做了4组每组8次","user_id":"demo-user","request_id":"req-001"}'
 curl -X POST localhost:5001/api/chat -H 'Content-Type: application/json' \
      -d '{"text":"今天练了什么"}'
 ```
@@ -141,7 +141,7 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
                     └─ query  → 查询计划 → 执行 → 结果
 ```
 
-已实现：三分类意图路由、字段抽取与 complete/incomplete/invalid 三态、JSONL 落盘、两类查询（某天练了什么、某动作练了几次）、`POST /api/chat`、三层 trace 贯穿、四态 Verdict 与双口径报告。
+已实现：三分类意图路由、字段抽取与 complete/incomplete/invalid 三态、SQLite 默认持久化（JSONL 保留作教学对照）、用户范围与请求幂等、两类查询（某天练了什么、某动作练了几次）、`POST /api/chat`、三层 trace 贯穿、四态 Verdict 与双口径报告。
 
 **尚未实现**：多轮对话与上下文指代、追问补全、部位聚合与趋势分析、鉴权限流并发、前端页面。所以它是一个**带完整评测闭环的多节点 LLM workflow**，不是自主 Agent——不做概念包装。
 
@@ -159,7 +159,8 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
 - [Iteration 1 PRD](docs/prd-iter1-intent.md)：意图边界与十条标签决策表，业务口径唯一事实源
 - [Iteration 2 PRD](docs/prd-iter2-extract.md)：抽取字段、三态判定与写入规则
 - [Iteration 3 PRD](docs/prd-iter3-query.md)：查询口径、时间边界与 Clock 注入
-- [存储选型与企业实践差异](docs/存储选型与企业实践差异.md)：为什么用 JSONL，企业里怎么做
+- [V6 SQLite 持久化 PRD](docs/prd-v6-persistence.md) · [V6 技术设计](docs/architecture-v6-persistence.md)
+- [存储选型与企业实践差异](docs/存储选型与企业实践差异.md)：JSONL 的教学边界与数据库场景
 - [代码实现讲解](docs/迭代一代码实现讲解.md)：每个文件为什么这么写
 - [AI 评测入口](eval/README.md) · [评测计划](eval/意图识别评测计划.md) · [Iteration 1 正式报告](eval/reports/迭代一意图识别评测报告.md)
 - [断言方法论](eval/methodology/断言方法论.md)：四问、四态、三级漏斗
@@ -169,7 +170,7 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
 ## 验证
 
 ```bash
-.venv/bin/python -m pytest -q                                          # 94 passed
+.venv/bin/python -m pytest -q                                          # 146 passed
 .venv/bin/python eval/run_intent_eval.py  --views all --run-mode stub  # 58/58，零 token
 .venv/bin/python eval/run_extract_eval.py --views all --run-mode stub  # 28/28
 .venv/bin/python eval/run_query_eval.py   --views all --run-mode stub  # 22/22

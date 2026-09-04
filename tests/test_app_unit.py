@@ -5,7 +5,7 @@ import pytest
 from backend.app import create_app
 from backend.clock import FrozenClock
 from backend.llm import LLMResult
-from backend.storage import FakeStorage
+from backend.storage import FakeStorage, SQLiteStorage
 
 
 NOW = "2026-09-03T20:00:00+08:00"
@@ -111,3 +111,43 @@ def test_query_via_http_never_writes(storage):
     llm = ScriptedLLM("query", plan_raw='{"type":"list_by_date","date":"2026-09-03"}')
     build_client(llm, storage).post("/api/chat", json={"text": "今天练了什么"})
     assert storage.read_all() == []
+
+
+def test_http_passes_user_and_request_context_to_sqlite(tmp_path):
+    llm = ScriptedLLM(
+        "record",
+        extract_raw=json.dumps(
+            {
+                "records": [
+                    {
+                        "exercise": "卧推",
+                        "weight_kg": 60,
+                        "sets": 4,
+                        "reps": 8,
+                        "duration_min": None,
+                        "distance_km": None,
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+    )
+    storage = SQLiteStorage(tmp_path / "records.sqlite3")
+    client = build_client(llm, storage)
+
+    first = client.post(
+        "/api/chat",
+        json={"text": "今天卧推60kg做了4组", "user_id": "user-a", "request_id": "req-1"},
+    )
+    replay = client.post(
+        "/api/chat",
+        json={"text": "今天卧推60kg做了4组", "user_id": "user-a", "request_id": "req-1"},
+    )
+
+    assert first.status_code == 200
+    assert first.get_json()["idempotent_replay"] is False
+    assert replay.status_code == 200
+    assert replay.get_json()["idempotent_replay"] is True
+    assert replay.get_json()["written_ids"] == first.get_json()["written_ids"]
+    assert len(storage.read_all("user-a")) == 1
+    assert storage.read_all("user-b") == []

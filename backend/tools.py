@@ -107,7 +107,8 @@ def _require_date(value: Any, field: str) -> str:
 
 
 def make_executors(
-    storage: StorageClient, clock: Clock, trace_id: str
+    storage: StorageClient, clock: Clock, trace_id: str,
+    user_id: str = "demo-user", request_id: str | None = None,
 ) -> dict[str, Callable[[dict[str, Any]], dict[str, Any]]]:
     """把现成能力包成工具。业务逻辑一行不改，保证与固定链路可比。
 
@@ -117,14 +118,19 @@ def make_executors(
     def create_record(args: dict[str, Any]) -> dict[str, Any]:
         record = validate_create_args(args)
         record["state"] = decide_record_state(record)
-        written = storage.append([record], trace_id, clock.now())
-        return {"written": len(written), "ids": written, "state": record["state"]}
+        result = storage.append([record], trace_id, clock.now(), user_id, request_id)
+        return {
+            "written": len(result),
+            "ids": result.written_ids,
+            "state": record["state"],
+            "idempotent_replay": result.idempotent_replay,
+        }
 
     def query_records(args: dict[str, Any]) -> dict[str, Any]:
         if set(args) != {"date"}:
             raise ToolError("query_records takes only date")
         plan = {"type": "list_by_date", "date": _require_date(args.get("date"), "date")}
-        outcome = execute_plan(plan, storage)
+        outcome = execute_plan(plan, storage, user_id=user_id)
         return {"count": outcome["count"], "records": outcome["records"]}
 
     def count_exercise(args: dict[str, Any]) -> dict[str, Any]:
@@ -143,7 +149,7 @@ def make_executors(
             "from": start,
             "to": end,
         }
-        outcome = execute_plan(plan, storage)
+        outcome = execute_plan(plan, storage, user_id=user_id)
         return {"count": outcome["count"]}
 
     return {
