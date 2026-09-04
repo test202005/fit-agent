@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import uuid
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -53,6 +54,11 @@ from eval.stability import (  # noqa: E402
 
 
 DATASET_PATH = ROOT / "eval" / "datasets" / "tool-dataset.jsonl"
+
+
+def build_trace_id(case_id: str) -> str:
+    """每个 trial 必须唯一，否则多轮报告无法精确回溯单次执行。"""
+    return f"t-{case_id}-{uuid.uuid4()}"
 
 
 def load_cases(view: str) -> list[dict[str, Any]]:
@@ -171,7 +177,9 @@ def run_case(case: dict[str, Any], run_mode: str, live_llm: LiveLLM | None) -> d
     if llm is None:
         raise RuntimeError("live LLM is not initialized")
 
-    result = run_agent(case["input"], llm, storage, tracer, clock, f"t-{case['case_id']}")
+    result = run_agent(
+        case["input"], llm, storage, tracer, clock, build_trace_id(case["case_id"])
+    )
 
     contract = assert_contract(result)
     divergence = None

@@ -1,5 +1,6 @@
 import pytest
 
+from eval.run_tool_eval import build_trace_id
 from backend.agent import MAX_TOOL_CALLS, run_agent
 from backend.clock import FrozenClock
 from backend.llm import StubLLM, ToolCall
@@ -170,3 +171,11 @@ def test_llm_failure_returns_error_code():
     )
     assert result["ok"] is False
     assert result["error_code"] == "llm_timeout"
+
+
+def test_tool_eval_trace_id_is_unique_per_trial():
+    first = build_trace_id("tl-001")
+    second = build_trace_id("tl-001")
+    assert first.startswith("t-tl-001-")
+    assert second.startswith("t-tl-001-")
+    assert first != second

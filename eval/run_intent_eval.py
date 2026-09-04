@@ -204,6 +204,11 @@ def decide_verdict(
     return "FAIL"
 
 
+def exit_code_for_results(results: list[dict[str, Any]]) -> int:
+    """REVIEW 不阻断执行；FAIL 或 ERROR 代表本次运行不可准出。"""
+    return 0 if all(result["verdict"] in {"PASS", "REVIEW"} for result in results) else 1
+
+
 def assert_contract(result: dict[str, Any]) -> list[dict[str, Any]]:
     """第一问：系统承诺了什么。响应结构、枚举与互斥，不看业务语义。"""
     checks: list[tuple[str, bool]] = []
@@ -600,7 +605,7 @@ def main() -> int:
         "metrics": metrics_by_run,
     }
     print(json.dumps(summary, ensure_ascii=False))
-    return 0 if all(result["pass"] for result in all_results) else 1
+    return exit_code_for_results(all_results)
 
 
 if __name__ == "__main__":

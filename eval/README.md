@@ -15,7 +15,7 @@
 | `eval/` | Stub 契约回归和真实模型质量评测 |
 | `backend/logs/` | Router Trace 原始事件 |
 
-Iteration 1 只评测 `record / query / reject` 三分类意图路由，不评测 extractor、存储、查询执行、HTTP 或多轮状态。
+当前共有四套评测：意图识别、抽取与受控写入、查询规划与执行、单轮 Tool Use。多步 Agent Loop 和多轮 Memory 尚未实现，因此当前不评测跨步骤推理或跨轮记忆。
 
 ## 2. 目录导航
 
@@ -23,25 +23,37 @@ Iteration 1 只评测 `record / query / reject` 三分类意图路由，不评�
 eval/
 ├── README.md
 ├── 意图识别评测计划.md
-├── run_intent_eval.py
+├── run_intent_eval.py / run_extract_eval.py
+├── run_query_eval.py  / run_tool_eval.py
+├── stability.py
 ├── datasets/
-│   └── intent-dataset.jsonl
+│   ├── intent-dataset.jsonl
+│   ├── extract-dataset.jsonl
+│   ├── query-dataset.jsonl
+│   └── tool-dataset.jsonl
 ├── methodology/
+│   ├── 断言方法论.md
+│   ├── 数据集方法论.md
 │   └── 意图识别数据集设计方法.md
 ├── reports/
-│   └── 迭代一意图识别评测报告.md
+│   ├── 迭代一意图识别评测报告.md
+│   ├── 稳定性与成本口径评测报告.md
+│   ├── 版本演进与问题复盘.md
+│   └── 问题清单.md
 └── results/
-    ├── case-results-<timestamp>.jsonl
-    └── report-<timestamp>.md
+    └── <runner>-results/report-<timestamp>.*
 ```
 
 | 想做什么 | 入口 |
 |---|---|
+| 看当前项目评测状态 | [当前进度](../当前进度.md) |
 | 开始新一轮意图评测 | [意图识别评测计划](意图识别评测计划.md) |
 | 看 Iteration 1 最终结论 | [正式报告](reports/迭代一意图识别评测报告.md) |
 | 理解当前 100% 的适用边界 | [数据集设计方法](methodology/意图识别数据集设计方法.md) |
-| 查看或扩充 Case | [意图数据集](datasets/intent-dataset.jsonl) |
-| 查看评测实现 | [Runner](run_intent_eval.py) |
+| 查看四套 Case | [`datasets/`](datasets/) 下四个 JSONL |
+| 查看评测实现 | `run_intent/extract/query/tool_eval.py` |
+| 看稳定性与成本证据 | [稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md) |
+| 看已知问题与处理边界 | [问题清单](reports/问题清单.md) |
 | 追溯某次运行 | `results/` 中的报告与逐 Case JSONL，再按 `trace_id` 查 `backend/logs/trace.jsonl` |
 
 ## 3. 数据集视图
@@ -109,15 +121,22 @@ Case 最小结构：
 
 Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEEPSEEK_MODEL`。不得输出、记录或提交密钥。
 
-### 其余三个 Runner
+### 抽取、查询和 Tool Use Runner
 
-抽取、查询、工具调用共用同一套参数，只是数据集和断言不同：
+四个 Runner 共用同一组运行矩阵参数，但每套的业务对象和断言不同：
 
 ```bash
 .venv/bin/python eval/run_extract_eval.py --views all --run-mode stub --runs 2
 .venv/bin/python eval/run_query_eval.py   --views all --run-mode stub --runs 2
 .venv/bin/python eval/run_tool_eval.py    --views all --run-mode stub --runs 2
 ```
+
+| Runner | 主要验证 |
+|---|---|
+| `run_intent_eval.py` | 意图、错误协议、Trace 一致性、高风险误进 `record` |
+| `run_extract_eval.py` | 抽取字段、三态判定、写入次数和 invalid 保护 |
+| `run_query_eval.py` | 查询计划、执行结果、时间边界和零写入 |
+| `run_tool_eval.py` | 工具选择、参数、调用次数、副作用和首个分歧步骤 |
 
 ### 运行矩阵参数
 
@@ -145,7 +164,7 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 
 升温跑出的结果**不是质量结论**，不得写进验收报告。已有一次对照实测见 [稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md) 第 4 节。
 
-注意：`run_intent_eval.py` 只要存在 REVIEW Case 就返回退出码 1（既有行为），另外三个 Runner 无此逻辑。接 CI 时不要直接用退出码判成败。
+四个 Runner 的退出码契约已统一：只有 `PASS / REVIEW` 时返回 0，出现 `FAIL / ERROR` 时返回 1。
 
 ## 5. 报告怎么看
 
@@ -183,4 +202,4 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 
 ## 7. 当前状态
 
-Iteration 1 工程闭环已经完成。当前准确口径是：16 条小规模验收集连续三轮全部通过；这不等于真实用户分布下的意图准确率为 100%。详情见[正式报告](reports/迭代一意图识别评测报告.md)和[数据集方法](methodology/意图识别数据集设计方法.md)。新一轮评测从[意图识别评测计划](意图识别评测计划.md)开始 Review。
+V4.0 Tool Use 已完成，四套评测 Runner 已建成。V5.0 稳定性与成本口径已关账：四个 Runner 都已完成 Live 三轮证据，P-007 退出码契约已统一。准确状态以[当前进度](../当前进度.md)为准，证据边界见[稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md)。

@@ -9,9 +9,25 @@ from eval.run_intent_eval import (
     assert_contract,
     assert_trace_consistency,
     decide_verdict,
+    exit_code_for_results,
     expected_trace_events,
     render_report,
 )
+
+
+@pytest.mark.parametrize(
+    ("verdicts", "expected"),
+    [
+        (["PASS"], 0),
+        (["PASS", "REVIEW"], 0),
+        (["FAIL"], 1),
+        (["ERROR"], 1),
+        (["PASS", "REVIEW", "FAIL"], 1),
+    ],
+)
+def test_exit_code_follows_four_state_contract(verdicts, expected):
+    results = [{"verdict": verdict} for verdict in verdicts]
+    assert exit_code_for_results(results) == expected
 
 
 @pytest.mark.parametrize(
