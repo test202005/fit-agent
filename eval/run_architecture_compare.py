@@ -25,6 +25,7 @@ from backend.pipeline import handle_message  # noqa: E402
 from backend.storage import FakeStorage  # noqa: E402
 from backend.trace import Tracer  # noqa: E402
 from eval.run_intent_eval import RESULTS_DIR, TRACE_PATH, git_commit, load_dotenv, safe_div  # noqa: E402
+from eval.stability import collect_usages  # noqa: E402
 
 NOW = "2026-09-03T20:00:00+08:00"
 
@@ -52,12 +53,24 @@ def measure(fn) -> tuple[Any, float]:
     return out, round((time.perf_counter() - started) * 1000, 1)
 
 
+def cost(tracer: Tracer) -> dict[str, int]:
+    """两种架构的成本必须同口径：都从 trace 里数模型调用次数与 token。"""
+    usages = collect_usages(tracer.events)
+    return {
+        "llm_calls": len(usages),
+        "prompt_tokens": sum(u.get("prompt_tokens", 0) for u in usages),
+        "completion_tokens": sum(u.get("completion_tokens", 0) for u in usages),
+        "tokens": sum(u.get("total_tokens", 0) for u in usages),
+    }
+
+
 def run_fixed(case: dict, llm: LiveLLM) -> dict[str, Any]:
     storage = FakeStorage()
     clock = FrozenClock(NOW)
+    tracer = Tracer(TRACE_PATH)
     result, ms = measure(
         lambda: handle_message(
-            case["text"], llm, llm, storage, Tracer(TRACE_PATH), query_llm=llm, clock=clock
+            case["text"], llm, llm, storage, tracer, query_llm=llm, clock=clock
         )
     )
     queries = 1 if result.get("stage") == "executor" else 0
@@ -66,14 +79,16 @@ def run_fixed(case: dict, llm: LiveLLM) -> dict[str, Any]:
         "queries": queries,
         "ms": ms,
         "ok": bool(result.get("ok")),
+        **cost(tracer),
     }
 
 
 def run_tools(case: dict, llm: LiveLLM) -> dict[str, Any]:
     storage = FakeStorage()
     clock = FrozenClock(NOW)
+    tracer = Tracer(TRACE_PATH)
     result, ms = measure(
-        lambda: run_agent(case["text"], llm, storage, Tracer(TRACE_PATH), clock, f"t-{case['id']}")
+        lambda: run_agent(case["text"], llm, storage, tracer, clock, f"t-{case['id']}")
     )
     traj = result.get("trajectory", [])
     return {
@@ -81,6 +96,7 @@ def run_tools(case: dict, llm: LiveLLM) -> dict[str, Any]:
         "queries": sum(1 for s in traj if s["tool"] in {"query_records", "count_exercise"}),
         "ms": ms,
         "ok": bool(result.get("ok")),
+        **cost(tracer),
     }
 
 
@@ -110,12 +126,21 @@ def main() -> int:
         subset = [r for r in rows if kind is None or r["kind"] == kind]
         if not subset:
             return {}
+        def avg(arch: str, field: str) -> float:
+            return round(sum(r[arch][field] for r in subset) / len(subset), 1)
+
         return {
             "n": len(subset),
             "fixed_pass_rate": round(safe_div(sum(r["fixed_pass"] for r in subset), len(subset)), 4),
             "tools_pass_rate": round(safe_div(sum(r["tools_pass"] for r in subset), len(subset)), 4),
-            "fixed_avg_ms": round(sum(r["fixed"]["ms"] for r in subset) / len(subset), 1),
-            "tools_avg_ms": round(sum(r["tools"]["ms"] for r in subset) / len(subset), 1),
+            "fixed_avg_ms": avg("fixed", "ms"),
+            "tools_avg_ms": avg("tools", "ms"),
+            "fixed_avg_calls": avg("fixed", "llm_calls"),
+            "tools_avg_calls": avg("tools", "llm_calls"),
+            "fixed_avg_tokens": avg("fixed", "tokens"),
+            "tools_avg_tokens": avg("tools", "tokens"),
+            "fixed_total_tokens": sum(r["fixed"]["tokens"] for r in subset),
+            "tools_total_tokens": sum(r["tools"]["tokens"] for r in subset),
         }
 
     summary = {"all": summarize(), "single": summarize("single"), "compound": summarize("compound")}
@@ -142,6 +167,22 @@ def main() -> int:
                 f"| {label} | {s['n']} | {s['fixed_pass_rate']:.4f} | {s['tools_pass_rate']:.4f} | "
                 f"{s['fixed_avg_ms']:.0f}ms | {s['tools_avg_ms']:.0f}ms |"
             )
+    lines.extend([
+        "", "## 成本", "",
+        "> 工具描述会进 prompt，单次调用更贵；固定链路每请求走两次模型（路由 + 抽取/规划）。"
+        "谁总成本更低要看这两者相抵的结果，不能只比单次。", "",
+        "| 场景 | 固定链路 调用/请求 | 工具调用 调用/请求 | 固定链路 token/请求 | 工具调用 token/请求 | 差值 |",
+        "|---|---:|---:|---:|---:|---:|",
+    ])
+    for label, key in [("全部", "all"), ("单一意图", "single"), ("复合请求", "compound")]:
+        s = summary[key]
+        if s:
+            delta = s["tools_avg_tokens"] - s["fixed_avg_tokens"]
+            lines.append(
+                f"| {label} | {s['fixed_avg_calls']:.2f} | {s['tools_avg_calls']:.2f} | "
+                f"{s['fixed_avg_tokens']:.0f} | {s['tools_avg_tokens']:.0f} | "
+                f"{delta:+.0f} |"
+            )
     lines.extend(["", "## 逐条结果", "",
         "| run | id | 输入 | 类型 | 期望 写/查 | 固定链路 | 工具调用 |",
         "|---:|---|---|---|---|---|---|"])
@@ -149,8 +190,10 @@ def main() -> int:
         f, t, e = r["fixed"], r["tools"], r["expected"]
         lines.append(
             f"| {r['run']} | {r['id']} | {r['text']} | {r['kind']} | {e['writes']}/{e['queries']} | "
-            f"{f['writes']}/{f['queries']} {'✅' if r['fixed_pass'] else '❌'} {f['ms']:.0f}ms | "
-            f"{t['writes']}/{t['queries']} {'✅' if r['tools_pass'] else '❌'} {t['ms']:.0f}ms |"
+            f"{f['writes']}/{f['queries']} {'✅' if r['fixed_pass'] else '❌'} {f['ms']:.0f}ms "
+            f"{f['llm_calls']}call/{f['tokens']}tok | "
+            f"{t['writes']}/{t['queries']} {'✅' if r['tools_pass'] else '❌'} {t['ms']:.0f}ms "
+            f"{t['llm_calls']}call/{t['tokens']}tok |"
         )
     report = RESULTS_DIR / f"arch-compare-{ts}.md"
     report.write_text("\n".join(lines), encoding="utf-8")

@@ -12,7 +12,22 @@
 
 ## 当前阶段
 
-**Phase 1（拆三迭代）· iter-1 意图识别：已正式关账**（运行版本 `1a61947`；单测、Stub、DeepSeek discovery/regression/locked 回归均通过，实现 Review 六条关账门禁已关闭。当前恢复入口见 [当前进度.md](当前进度.md)；测试入口见 [eval/README.md](eval/README.md)，下一轮评测计划见 [eval/意图识别评测计划.md](eval/意图识别评测计划.md)，五项待合入决议见 [docs/eval-plan-review.md](docs/eval-plan-review.md)，结果见 [eval/reports/迭代一意图识别评测报告.md](eval/reports/迭代一意图识别评测报告.md)，架构见 [docs/architecture-iter1.md](docs/architecture-iter1.md)，PRD 见 [docs/prd-iter1-intent.md](docs/prd-iter1-intent.md) v4）。SDK 使用 OpenAI Python SDK 兼容 DeepSeek API，模型默认 `deepseek-v4-flash`。总纲见 [docs/master-plan.md](docs/master-plan.md)（v3），Phase 1 总需求见 [docs/prd.md](docs/prd.md)（v2）。
+**V4.0 工具调用已完成（L1 Tool Use）；V5.0 稳定性与成本口径已建成，未关账。**
+
+权威事实源是 [当前进度.md](当前进度.md)——本节只给稳定坐标，具体进度以那份为准，两边冲突时以 `当前进度.md` 为准。
+
+已关账的迭代：iter-1 意图识别（`1a61947`）、iter-2 抽取与受控写入、iter-3 查询与 Clock 注入、iter-4 工具调用与双架构对比。
+
+| 入口 | 文件 |
+|---|---|
+| 恢复工作 | [当前进度.md](当前进度.md) |
+| 评测总入口 | [eval/README.md](eval/README.md) |
+| 迭代规划依据 | [docs/Agent能力与评测全景.md](docs/Agent能力与评测全景.md) |
+| 问题细账 | [eval/reports/问题清单.md](eval/reports/问题清单.md) |
+| 版本主线 | [eval/reports/版本演进与问题复盘.md](eval/reports/版本演进与问题复盘.md) |
+| 内容系列总纲 | [content/系列大纲.md](content/系列大纲.md) |
+
+SDK 使用 OpenAI Python SDK 兼容 DeepSeek API，模型默认 `deepseek-v4-flash`（另有 `deepseek-v4-pro` 可用于多模型对比）。总纲见 [docs/master-plan.md](docs/master-plan.md)（v4），Phase 1 总需求见 [docs/prd.md](docs/prd.md)（v2）。
 
 流程约定：每迭代先写专项 PRD → 主人评审 → 过门禁 → 动码 → 过退出门禁才进下一迭代。iter-1 动码时先 `git init` + `.gitignore`（logs/、数据文件）。
 
@@ -59,13 +74,15 @@ Python + OpenAI Python SDK（DeepSeek API，模型经 `DEEPSEEK_MODEL` 配置）
 
 ## 验证
 
-Iteration 1 验证命令：
+改完必跑：
 
 ```bash
 .venv/bin/python -m pytest -q
 .venv/bin/python eval/run_intent_eval.py --views all --run-mode stub
 .venv/bin/python eval/run_intent_eval.py --views discovery --run-mode live --runs 3
 ```
+
+注意：`run_intent_eval.py --views all` 当前**永远返回退出码 1**——数据集里两条 observation tier 恒判 REVIEW，而该 Runner 的退出码把 REVIEW 计为失败。这是已登记未修的 P-007，不是回归。判断是否通过看报告的 `FAIL` 数，不看退出码。
 
 四个 Runner 共用 `--runs`（多轮）、`--models`（多模型横向对比）和 `--temperature`（覆盖采样温度），后两个仅 live 生效。报告按 `模型 × 轮次` 分节并汇总 pass@k / pass^k / flaky / token，metadata 记实际生效温度。口径定义见 [eval/stability.py](eval/stability.py)，读法见 [eval/README.md](eval/README.md)。
 
@@ -76,3 +93,11 @@ Iteration 1 验证命令：
 .venv/bin/python eval/run_query_eval.py   --views all --run-mode stub --runs 2
 .venv/bin/python eval/run_tool_eval.py    --views all --run-mode stub --runs 2
 ```
+
+架构对比（真实模型，会花 token）：
+
+```bash
+.venv/bin/python eval/run_architecture_compare.py --runs 2
+```
+
+报告含通过率、耗时、调用次数和 token 五个维度，两种架构同口径——都从 trace 事件收集 usage，不读业务返回结构。
