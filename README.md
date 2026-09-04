@@ -160,6 +160,7 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
 - [Iteration 2 PRD](docs/prd-iter2-extract.md)：抽取字段、三态判定与写入规则
 - [Iteration 3 PRD](docs/prd-iter3-query.md)：查询口径、时间边界与 Clock 注入
 - [V6 SQLite 持久化 PRD](docs/prd-v6-persistence.md) · [V6 技术设计](docs/architecture-v6-persistence.md)
+- [V6 SQLite 持久化迭代复盘](eval/reports/V6 SQLite持久化迭代复盘.md)
 - [存储选型与企业实践差异](docs/存储选型与企业实践差异.md)：JSONL 的教学边界与数据库场景
 - [代码实现讲解](docs/迭代一代码实现讲解.md)：每个文件为什么这么写
 - [AI 评测入口](eval/README.md) · [评测计划](eval/意图识别评测计划.md) · [Iteration 1 正式报告](eval/reports/迭代一意图识别评测报告.md)
@@ -170,7 +171,7 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
 ## 验证
 
 ```bash
-.venv/bin/python -m pytest -q                                          # 146 passed
+.venv/bin/python -m pytest -q                                          # 147 passed
 .venv/bin/python eval/run_intent_eval.py  --views all --run-mode stub  # 58/58，零 token
 .venv/bin/python eval/run_extract_eval.py --views all --run-mode stub  # 28/28
 .venv/bin/python eval/run_query_eval.py   --views all --run-mode stub  # 22/22

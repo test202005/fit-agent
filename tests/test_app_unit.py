@@ -151,3 +151,50 @@ def test_http_passes_user_and_request_context_to_sqlite(tmp_path):
     assert replay.get_json()["written_ids"] == first.get_json()["written_ids"]
     assert len(storage.read_all("user-a")) == 1
     assert storage.read_all("user-b") == []
+
+
+def test_http_write_survives_app_restart_and_can_be_queried(tmp_path):
+    write_llm = ScriptedLLM(
+        "record",
+        extract_raw=json.dumps(
+            {
+                "records": [
+                    {
+                        "exercise": "深蹲",
+                        "weight_kg": 100,
+                        "sets": 3,
+                        "reps": 5,
+                        "duration_min": None,
+                        "distance_km": None,
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+    )
+    path = tmp_path / "records.sqlite3"
+    first_app = create_app(
+        llm=write_llm,
+        storage=SQLiteStorage(path),
+        clock=FrozenClock(NOW),
+    )
+    first_app.config.update(TESTING=True)
+    write = first_app.test_client().post(
+        "/api/chat", json={"text": "今天深蹲100kg做了3组", "user_id": "user-a"}
+    )
+    assert write.status_code == 200
+
+    query_llm = ScriptedLLM("query", plan_raw='{"type":"list_by_date","date":"2026-09-03"}')
+    restarted_app = create_app(
+        llm=query_llm,
+        storage=SQLiteStorage(path),
+        clock=FrozenClock(NOW),
+    )
+    restarted_app.config.update(TESTING=True)
+    read = restarted_app.test_client().post(
+        "/api/chat", json={"text": "今天练了什么", "user_id": "user-a"}
+    )
+
+    assert read.status_code == 200
+    assert read.get_json()["count"] == 1
+    assert read.get_json()["records"][0]["exercise"] == "深蹲"
