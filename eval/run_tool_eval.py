@@ -15,7 +15,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from backend.agent import MAX_TOOL_CALLS  # noqa: E402
-from backend.agent import PROMPT_PATH as AGENT_PROMPT_PATH  # noqa: E402
 from backend.agent import run_agent  # noqa: E402
 from backend.clock import FrozenClock  # noqa: E402
 from backend.llm import (  # noqa: E402
@@ -28,6 +27,7 @@ from backend.llm import (  # noqa: E402
     StubLLM,
     ToolCall,
 )
+from backend.prompt_registry import load_prompt_asset  # noqa: E402
 from backend.storage import FakeStorage  # noqa: E402
 from backend.tools import TOOL_NAMES  # noqa: E402
 from backend.trace import Tracer  # noqa: E402
@@ -251,6 +251,7 @@ def render_report(metadata, metrics_by_run, results) -> str:
         f"- generated_at: {metadata['generated_at']}",
         f"- view: {metadata['view']}", f"- run_mode: {metadata['run_mode']}",
         f"- model: {metadata['model']}", f"- git_commit: {metadata['git_commit']}",
+        f"- agent_prompt_version: {metadata['agent_prompt_version']}",
         f"- agent_prompt_hash: {metadata['agent_prompt_hash']}",
         f"- dataset_hash: {metadata['dataset_hash']}",
         f"- temperature: {metadata['temperature']}",
@@ -348,12 +349,14 @@ def main() -> int:
     report_path = RESULTS_DIR / f"tool-report-{ts}.md"
     result_path.write_text(
         "\n".join(json.dumps(r, ensure_ascii=False) for r in all_results) + "\n", encoding="utf-8")
+    agent_prompt = load_prompt_asset("agent_system")
     metadata = {
         "generated_at": datetime.now(timezone.utc).isoformat(), "view": args.views,
         "run_mode": args.run_mode,
         "model": ", ".join(client_model(llm) for llm in clients),
         "runs": args.runs,
-        "git_commit": git_commit(), "agent_prompt_hash": sha256_file(AGENT_PROMPT_PATH),
+        "git_commit": git_commit(), "agent_prompt_version": agent_prompt.version,
+        "agent_prompt_hash": agent_prompt.prompt_hash,
         "dataset_hash": sha256_file(DATASET_PATH), "temperature": effective_temperature(args),
         "max_tokens": MAX_TOOL_TOKENS, "thinking": THINKING_MODE,
         "timeout_seconds": TIMEOUT_SECONDS, "max_retries": MAX_RETRIES,

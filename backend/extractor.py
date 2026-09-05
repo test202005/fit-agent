@@ -1,24 +1,24 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import time
-from pathlib import Path
 from typing import Any
 
 from backend.llm import LLMApiError, LLMClient, LLMTimeout, TEMPERATURE, usage_payload
+from backend.prompt_registry import load_prompt_asset, prompt_path
 from backend.storage import RECORD_FIELDS
 from backend.trace import Tracer
 
 
-PROMPT_PATH = Path(__file__).parent / "prompts" / "extractor_v1.txt"
+PROMPT_NAME = "extractor"
+PROMPT_PATH = prompt_path(PROMPT_NAME)
 QUANT_FIELDS = ("weight_kg", "sets", "reps", "duration_min", "distance_km")
 STATES = ("complete", "incomplete", "invalid")
 
 
 def load_prompt() -> tuple[str, str]:
-    content = PROMPT_PATH.read_text(encoding="utf-8")
-    return content, "sha256:" + hashlib.sha256(content.encode("utf-8")).hexdigest()
+    prompt = load_prompt_asset(PROMPT_NAME)
+    return prompt.content, prompt.prompt_hash
 
 
 def parse_extractor_output(raw_text: str) -> list[dict[str, Any]]:
@@ -78,11 +78,13 @@ def extract(
     text: str, llm: LLMClient, tracer: Tracer, trace_id: str
 ) -> dict[str, Any]:
     """trace_id 由上游传入，保证一条链路只有一个 id。"""
-    system_prompt, prompt_hash = load_prompt()
+    prompt = load_prompt_asset(PROMPT_NAME)
+    system_prompt, prompt_hash = prompt.content, prompt.prompt_hash
     tracer.emit(
         trace_id,
         "extract_request",
-        {"model": llm.model, "prompt_hash": prompt_hash, "temperature": TEMPERATURE},
+        {"model": llm.model, "prompt_name": prompt.name, "prompt_version": prompt.version,
+         "prompt_hash": prompt_hash, "temperature": TEMPERATURE},
         node="extractor",
     )
     started = time.perf_counter()

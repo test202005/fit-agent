@@ -13,7 +13,6 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backend.extractor import PROMPT_PATH as EXTRACT_PROMPT_PATH  # noqa: E402
 from backend.extractor import QUANT_FIELDS, STATES  # noqa: E402
 from backend.llm import (  # noqa: E402
     MAX_RETRIES,
@@ -25,7 +24,7 @@ from backend.llm import (  # noqa: E402
     StubLLM,
 )
 from backend.pipeline import handle_message  # noqa: E402
-from backend.router import PROMPT_PATH as ROUTER_PROMPT_PATH  # noqa: E402
+from backend.prompt_registry import load_prompt_asset  # noqa: E402
 from backend.storage import FakeStorage, RECORD_FIELDS  # noqa: E402
 from backend.trace import Tracer  # noqa: E402
 
@@ -278,7 +277,9 @@ def render_report(
         f"- run_mode: {metadata['run_mode']}",
         f"- model: {metadata['model']}",
         f"- git_commit: {metadata['git_commit']}",
+        f"- router_prompt_version: {metadata['router_prompt_version']}",
         f"- router_prompt_hash: {metadata['router_prompt_hash']}",
+        f"- extract_prompt_version: {metadata['extract_prompt_version']}",
         f"- extract_prompt_hash: {metadata['extract_prompt_hash']}",
         f"- dataset_hash: {metadata['dataset_hash']}",
         f"- temperature: {metadata['temperature']}",
@@ -401,6 +402,8 @@ def main() -> int:
         "\n".join(json.dumps(r, ensure_ascii=False) for r in all_results) + "\n",
         encoding="utf-8",
     )
+    router_prompt = load_prompt_asset("intent_router")
+    extract_prompt = load_prompt_asset("extractor")
     metadata = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "view": args.views,
@@ -408,8 +411,10 @@ def main() -> int:
         "model": ", ".join(client_model(llm) for llm in clients),
         "runs": args.runs,
         "git_commit": git_commit(),
-        "router_prompt_hash": sha256_file(ROUTER_PROMPT_PATH),
-        "extract_prompt_hash": sha256_file(EXTRACT_PROMPT_PATH),
+        "router_prompt_version": router_prompt.version,
+        "router_prompt_hash": router_prompt.prompt_hash,
+        "extract_prompt_version": extract_prompt.version,
+        "extract_prompt_hash": extract_prompt.prompt_hash,
         "dataset_hash": sha256_file(DATASET_PATH),
         "temperature": effective_temperature(args),
         "max_tokens": MAX_TOKENS,

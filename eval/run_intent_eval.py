@@ -26,7 +26,8 @@ from backend.llm import (  # noqa: E402
     LiveLLM,
     StubLLM,
 )
-from backend.router import PROMPT_PATH, route  # noqa: E402
+from backend.router import route  # noqa: E402
+from backend.prompt_registry import load_prompt_asset  # noqa: E402
 from backend.trace import Tracer  # noqa: E402
 
 from eval.stability import (  # noqa: E402
@@ -441,6 +442,8 @@ def render_report(
         f"- run_mode: {metadata['run_mode']}",
         f"- model: {metadata['model']}",
         f"- git_commit: {metadata['git_commit']}",
+        f"- prompt_name: {metadata['prompt_name']}",
+        f"- prompt_version: {metadata['prompt_version']}",
         f"- prompt_hash: {metadata['prompt_hash']}",
         f"- dataset_hash: {metadata['dataset_hash']}",
         f"- temperature: {metadata['temperature']}",
@@ -581,6 +584,7 @@ def main() -> int:
         "\n".join(json.dumps(result, ensure_ascii=False) for result in all_results) + "\n",
         encoding="utf-8",
     )
+    prompt = load_prompt_asset("intent_router")
     metadata = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "view": args.views,
@@ -588,7 +592,9 @@ def main() -> int:
         "model": ", ".join(client_model(llm) for llm in clients),
         "runs": args.runs,
         "git_commit": git_commit(),
-        "prompt_hash": sha256_file(PROMPT_PATH),
+        "prompt_name": prompt.name,
+        "prompt_version": prompt.version,
+        "prompt_hash": prompt.prompt_hash,
         "dataset_hash": sha256_file(DATASET_PATH),
         "temperature": effective_temperature(args),
         "max_tokens": MAX_TOKENS,

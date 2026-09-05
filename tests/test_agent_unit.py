@@ -157,6 +157,9 @@ def test_trace_covers_agent_and_tool_nodes():
     assert {event["node"] for event in tracer.events} == {"agent", "tool"}
     events = [event["event"] for event in tracer.events]
     assert events == ["agent_request", "agent_response", "tool_result", "result"]
+    request = next(event for event in tracer.events if event["event"] == "agent_request")
+    assert request["payload"]["prompt_name"] == "agent_system"
+    assert request["payload"]["prompt_version"] == "v1"
 
 
 def test_written_record_carries_trace_id():

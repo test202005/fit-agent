@@ -1,24 +1,23 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import time
 import uuid
-from pathlib import Path
 from typing import Any
 
 from backend.llm import LLMApiError, LLMClient, LLMTimeout, TEMPERATURE, usage_payload
+from backend.prompt_registry import load_prompt_asset, prompt_path
 from backend.trace import Tracer
 
 
-PROMPT_PATH = Path(__file__).parent / "prompts" / "intent_router_v1.txt"
+PROMPT_NAME = "intent_router"
+PROMPT_PATH = prompt_path(PROMPT_NAME)
 INTENTS = {"record", "query", "reject"}
 
 
 def load_prompt() -> tuple[str, str]:
-    content = PROMPT_PATH.read_text(encoding="utf-8")
-    prompt_hash = "sha256:" + hashlib.sha256(content.encode("utf-8")).hexdigest()
-    return content, prompt_hash
+    prompt = load_prompt_asset(PROMPT_NAME)
+    return prompt.content, prompt.prompt_hash
 
 
 def _parse_router_output_details(raw_text: str) -> tuple[str, float, bool]:
@@ -61,11 +60,18 @@ def route(text: str, llm: LLMClient, tracer: Tracer) -> dict[str, Any]:
         tracer.emit(trace_id, "result", {"ok": False, "error_code": "bad_request"})
         return result
 
-    system_prompt, prompt_hash = load_prompt()
+    prompt = load_prompt_asset(PROMPT_NAME)
+    system_prompt, prompt_hash = prompt.content, prompt.prompt_hash
     tracer.emit(
         trace_id,
         "llm_request",
-        {"model": llm.model, "prompt_hash": prompt_hash, "temperature": TEMPERATURE},
+        {
+            "model": llm.model,
+            "prompt_name": prompt.name,
+            "prompt_version": prompt.version,
+            "prompt_hash": prompt_hash,
+            "temperature": TEMPERATURE,
+        },
     )
     started = time.perf_counter()
     try:

@@ -1,0 +1,6 @@
+{
+  "agent_system": {"version": "v1", "file": "agent_system_v1.txt", "eval_runner": "eval/run_tool_eval.py"},
+  "extractor": {"version": "v1", "file": "extractor_v1.txt", "eval_runner": "eval/run_extract_eval.py"},
+  "intent_router": {"version": "v1", "file": "intent_router_v1.txt", "eval_runner": "eval/run_intent_eval.py"},
+  "query_planner": {"version": "v1", "file": "query_planner_v1.txt", "eval_runner": "eval/run_query_eval.py"}
+}

@@ -1,25 +1,25 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import time
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any
 
 from backend.clock import Clock, LOCAL_TZ
 from backend.llm import LLMApiError, LLMClient, LLMTimeout, TEMPERATURE, usage_payload
+from backend.prompt_registry import load_prompt_asset, prompt_path
 from backend.storage import StorageClient
 from backend.trace import Tracer
 
 
-PROMPT_PATH = Path(__file__).parent / "prompts" / "query_planner_v1.txt"
+PROMPT_NAME = "query_planner"
+PROMPT_PATH = prompt_path(PROMPT_NAME)
 QUERY_TYPES = ("list_by_date", "count_by_exercise", "unsupported")
 
 
 def load_prompt() -> tuple[str, str]:
-    content = PROMPT_PATH.read_text(encoding="utf-8")
-    return content, "sha256:" + hashlib.sha256(content.encode("utf-8")).hexdigest()
+    prompt = load_prompt_asset(PROMPT_NAME)
+    return prompt.content, prompt.prompt_hash
 
 
 # ---------- Planner：唯一的不确定环节 ----------
@@ -80,14 +80,16 @@ def parse_plan(raw_text: str) -> dict[str, Any]:
 def plan_query(
     text: str, llm: LLMClient, tracer: Tracer, trace_id: str, clock: Clock
 ) -> dict[str, Any]:
-    system_prompt, prompt_hash = load_prompt()
+    prompt = load_prompt_asset(PROMPT_NAME)
+    system_prompt, prompt_hash = prompt.content, prompt.prompt_hash
     now = clock.now()
     # 相对日期要靠"今天是几号"才能解析，所以把当前时间显式喂给模型
     user_text = f"当前时间：{now.strftime('%Y-%m-%d %H:%M')}（{'一二三四五六日'[now.weekday()]}）\n用户输入：{text}"
     tracer.emit(
         trace_id,
         "plan_request",
-        {"model": llm.model, "prompt_hash": prompt_hash, "temperature": TEMPERATURE,
+        {"model": llm.model, "prompt_name": prompt.name, "prompt_version": prompt.version,
+         "prompt_hash": prompt_hash, "temperature": TEMPERATURE,
          "now": now.isoformat()},
         node="planner",
     )

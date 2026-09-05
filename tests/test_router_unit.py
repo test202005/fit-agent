@@ -89,6 +89,9 @@ def test_stub_success_has_complete_trace():
         "parse_result",
         "result",
     }
+    request = next(event for event in tracer.events if event["event"] == "llm_request")
+    assert request["payload"]["prompt_name"] == "intent_router"
+    assert request["payload"]["prompt_version"] == "v1"
 
 
 def test_numeric_string_confidence_is_visible_in_trace():
@@ -256,6 +259,8 @@ def test_report_contains_case_trace_and_badcase():
         "run_mode": "live",
         "model": "test-model",
         "git_commit": "test-commit",
+        "prompt_name": "intent_router",
+        "prompt_version": "v1",
         "prompt_hash": "sha256:prompt",
         "dataset_hash": "sha256:dataset",
         "temperature": 0,

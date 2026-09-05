@@ -1,24 +1,24 @@
 from __future__ import annotations
 
-import hashlib
 import time
-from pathlib import Path
 from typing import Any
 
 from backend.clock import Clock
 from backend.llm import LLMApiError, LLMTimeout, TEMPERATURE, usage_payload
+from backend.prompt_registry import load_prompt_asset, prompt_path
 from backend.storage import StorageClient
 from backend.tools import TOOL_NAMES, TOOL_SCHEMAS, ToolError, make_executors
 from backend.trace import Tracer
 
 
-PROMPT_PATH = Path(__file__).parent / "prompts" / "agent_system_v1.txt"
+PROMPT_NAME = "agent_system"
+PROMPT_PATH = prompt_path(PROMPT_NAME)
 MAX_TOOL_CALLS = 3  # PRD 决策 3：单轮上限，超出视为异常
 
 
 def load_prompt() -> tuple[str, str]:
-    content = PROMPT_PATH.read_text(encoding="utf-8")
-    return content, "sha256:" + hashlib.sha256(content.encode("utf-8")).hexdigest()
+    prompt = load_prompt_asset(PROMPT_NAME)
+    return prompt.content, prompt.prompt_hash
 
 
 def run_agent(
@@ -32,7 +32,8 @@ def run_agent(
     request_id: str | None = None,
 ) -> dict[str, Any]:
     """单轮工具调用：模型选工具 → 执行 → 回执。不做多步循环（留给 iter-5）。"""
-    system_prompt, prompt_hash = load_prompt()
+    prompt = load_prompt_asset(PROMPT_NAME)
+    system_prompt, prompt_hash = prompt.content, prompt.prompt_hash
     now = clock.now()
     user_text = (
         f"当前时间：{now.strftime('%Y-%m-%d %H:%M')}"
@@ -44,6 +45,8 @@ def run_agent(
         "agent_request",
         {
             "model": llm.model,
+            "prompt_name": prompt.name,
+            "prompt_version": prompt.version,
             "prompt_hash": prompt_hash,
             "temperature": TEMPERATURE,
             "tools": sorted(TOOL_NAMES),
