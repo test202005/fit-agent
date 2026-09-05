@@ -156,7 +156,7 @@ Guardrail：控制权限、副作用、幂等和调用上限
 | Trace | 记录工具调用、结果和首个失败步骤 | 已完成单轮追溯 |
 | 失败恢复 | 工具结果未回灌模型 | 尚未验证重试、换工具和最终失败说明 |
 
-当前最小实施项只有三项：补 `TOOL_SCHEMAS` 静态契约测试；核对 Schema 与 Validator 的字段、类型和未知字段策略；在 Trace 与报告增加 `tool_schema_hash`。工具失败回灌属于下一阶段 Agent Loop，不塞进本轮。
+当前最小实施项只有两项：补 `TOOL_SCHEMAS` 静态契约测试；核对 Schema 与 Validator 的字段、类型和未知字段策略。当前工具少且 Schema 随代码提交，先用 Git commit 追溯；等工具定义独立配置或多人频繁修改后，再增加 `tool_schema_hash`。工具失败回灌属于下一阶段 Agent Loop，不塞进本轮。
 
 ## 准出与收口
 
