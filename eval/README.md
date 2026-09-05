@@ -35,6 +35,7 @@ eval/
 │   └── tool-dataset.jsonl
 ├── methodology/
 │   ├── 断言方法论.md
+│   ├── 数据集实操手册.md
 │   ├── 数据集方法论.md
 │   └── 意图识别数据集设计方法.md
 ├── reports/
@@ -52,6 +53,7 @@ eval/
 | 开始新一轮意图评测 | [意图识别评测计划](意图识别评测计划.md) |
 | 看 Iteration 1 最终结论 | [正式报告](reports/迭代一意图识别评测报告.md) |
 | 理解当前 100% 的适用边界 | [数据集设计方法](methodology/意图识别数据集设计方法.md) |
+| 拿到需求开始设计数据集 | [数据集实操手册](methodology/数据集实操手册.md) |
 | 查看四套 Case | [`datasets/`](datasets/) 下四个 JSONL |
 | 查看评测实现 | `run_intent/extract/query/tool_eval.py` |
 | 看稳定性与成本证据 | [稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md) |
