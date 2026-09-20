@@ -16,7 +16,7 @@
 
 权威事实源是 [当前进度.md](当前进度.md)——本节只给稳定坐标，具体进度以那份为准，两边冲突时以 `当前进度.md` 为准。
 
-已实现的迭代：iter-1 意图识别（`1a61947`）、iter-2 抽取与受控写入、iter-3 查询与 Clock 注入、iter-4 工具调用与双架构对比、iter-5 训练计划生成（仍有未提交实现，不能仅凭 HEAD 复现）。最新验证入口见 [ROADMAP.md](ROADMAP.md)。
+已实现的迭代：iter-1 意图识别（`1a61947`）、iter-2 抽取与受控写入、iter-3 查询与 Clock 注入、iter-4 工具调用与双架构对比、iter-5 训练计划生成。最新验证入口见 [ROADMAP.md](ROADMAP.md)。
 
 | 入口 | 文件 |
 |---|---|
@@ -50,8 +50,7 @@ fit-agent/
 ├── docs/              # 产品定位、PRD、架构和迭代计划（master-plan.md 为总纲）
 ├── backend/           # Flask + Agent 链路代码
 ├── tests/             # 确定性代码单测
-├── eval/              # AI 评测总入口：方法、数据集、Runner、正式报告和原始结果
-└── seed_data/         # 种子画像数据（JSONL）
+└── eval/              # AI 评测总入口：方法、数据集、Runner、正式报告和原始结果
 ```
 
 - 代码、变量名和代码型数据文件使用英文；`eval/` 下供人和 AI 查找的 Markdown 文档优先使用可搜索的中文文件名

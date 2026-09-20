@@ -4,6 +4,8 @@
 
 ## 最近完成
 
+- 2026-09-20 19:09：V7 实现、Prompt 资产与文档已提交并推送，仓库改为公开（MIT）；README 重写为克隆后可跑通的快速开始，并修正「服务入口不读 `.env`」的旧说明。公开前已扫描全部 Git 历史，未发现密钥。
+
 - 2026-09-18 10:16：协作指南通用主稿迁入 [知识库](../weimi/wiki/agentic-coding-collaboration-guide.md)，项目原文改为导航入口；实现、Case 和报告继续在本仓库维护，避免双份正文。
 
 - 2026-09-18 10:10：完成 [Agentic Coding 协作指南 v0.1](docs/Agentic-Coding协作指南.md)，按整体框架、具体用法与时长修复案例、后续迭代原则组织；作为渐进协作参考，不新增自动化或强制流程。
@@ -30,6 +32,8 @@
 
 ## 最近验证
 
+- 2026-09-20 19:09：在公开仓库的干净 clone 中按 README 验证：219 条单测通过；五套 Stub Runner 退出码均为 0；Live 意图识别 discovery 1 轮（`deepseek-v4-flash`）为 28 PASS / 1 FAIL / 2 REVIEW、macro-F1 0.9691，单轮不形成稳定性结论；服务入口 `/health`、`/api/chat` 写入与查询各 1 次正常。
+
 - 2026-09-17 13:21：219 条单测通过；五套 Stub 各 2 轮无业务 FAIL/ERROR，计划故障检测器每轮 2/2；计划 discovery Live 1 轮为 7 PASS / 1 REVIEW、112/112 断言、7,466 Token。AI 助手逐条复核 8 条时长 note 未见无依据达标声明，用户语义验收待完成。[Live 报告](eval/results/plan-report-20260917T052022Z.md)。
 
 - 2026-09-16 11:20：当前断言下 discovery Live 1 轮，Flash 7 PASS / 1 REVIEW / 0 FAIL / 0 ERROR，98/98 断言，8,104 Token；202 条单测通过。`pl-004` 真实模型只生成 1 条动作，原始响应与证据见 [闭环复验](eval/reports/真实BadCase闭环-pl-004.md)。单轮不形成稳定性结论。
@@ -44,17 +48,15 @@
 - 当前是固定多步编排，不宣称自主 ReAct；v3 保留目标时长，预计时长为 null，不实现动作执行时长重算。历史 `total_min` 报告只验证声明值范围。
 - 后续优先用真实 Bad Case 验证排查闭环，暂不扩成评测平台。
 
-## 待提交范围
+## 未提交内容
 
-以下是工作区内容分组清单，尚未暂存或提交。
+V7 实现、Prompt 资产和相关文档已在 `main` 提交并推送。以下内容有意留在本地，尚未提交：
 
-| 分组 | 明确文件 | 说明 |
-|---|---|---|
-| Prompt 资产 | `backend/prompts/workout_planner_v1.txt`、`workout_generator_v1.txt`、`workout_generator_v2.txt`、`workout_generator_v3.txt`、`manifest.json`（均在该目录） | 按现有规则单独提交，保留旧版；新 manifest 依赖新增资产 |
-| 实现与评测 | `backend/action_lib.py`、`backend/plan.py`、`backend/llm.py`；`eval/run_plan_eval.py`、`eval/trace_contract.py`、`eval/trace_view.py`、`eval/datasets/plan-dataset.jsonl`；`tests/test_plan_unit.py`、`tests/test_prompt_registry_unit.py` | 同组保留依赖；不能只提交 runner 而遗漏尚未跟踪的业务模块 |
-| 说明与证据 | `CLAUDE.md`、`ROADMAP.md`、`当前进度.md`、`eval/README.md`；`eval/reports/问题清单.md`、`版本演进与问题复盘.md`、`V7 训练计划生成与可观测性迭代复盘.md`、`真实BadCase闭环-pl-004.md`（后四项均在 reports 目录） | 包含既有 V7 记录及本轮校正；自动报告与 Trace 不在版本库内 |
-| 待单独处理 | `docs/prd-iter5-plan-generation.md` | 仍标待评审，勿将实现通过当成 PRD 已获批准 |
-| 本轮排除 | `content/` 的既有文章改动、`eval/methodology/模型漂移与持续回归实操方案.md` | 属于独立内容工作，不混进本轮实现提交 |
-| 本轮排除 | `content/event:start` | 约 207 KB 的原始 SSE 事件文件，含会话标识，非代码依赖；保留原处，未清理 |
+| 内容 | 原因 |
+|---|---|
+| `content/` 下既有文章改动及新增《Agent 评测一两个月学习路线》 | 独立内容工作，待单独整理提交 |
+| `eval/methodology/模型漂移与持续回归实操方案.md` | 同上 |
+| `docs/prd-iter5-plan-generation.md` | 仍标待评审，勿将实现通过当成 PRD 已获批准 |
+| `content/event:start` | 约 207 KB 原始 SSE 事件文件，含会话标识；不得提交，保留原处 |
 
-验证边界：本轮修改时长输出协议、Generator Prompt、对应断言和测试；最新验证见上方 2026-09-17 记录。提交时还需显式纳入 untracked 文件及 `docs/训练计划时长一致性-需求与评测场景初稿.md`；当前未暂存或提交。当前评测不验证真实训练时长。
+验证边界：当前评测不验证真实训练时长。
