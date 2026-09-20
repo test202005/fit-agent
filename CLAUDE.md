@@ -12,15 +12,16 @@
 
 ## 当前阶段
 
-**V4.0 工具调用已完成（L1 Tool Use）；V5.0 稳定性与成本口径已建成，未关账。**
+**V7.0 已实现固定多步训练计划生成与可观测性，尚非自主 ReAct；V5.0 稳定性与成本口径、V5.1 两模型受控对比、V6 SQLite 持久化均已关账。**
 
 权威事实源是 [当前进度.md](当前进度.md)——本节只给稳定坐标，具体进度以那份为准，两边冲突时以 `当前进度.md` 为准。
 
-已关账的迭代：iter-1 意图识别（`1a61947`）、iter-2 抽取与受控写入、iter-3 查询与 Clock 注入、iter-4 工具调用与双架构对比。
+已实现的迭代：iter-1 意图识别（`1a61947`）、iter-2 抽取与受控写入、iter-3 查询与 Clock 注入、iter-4 工具调用与双架构对比、iter-5 训练计划生成（仍有未提交实现，不能仅凭 HEAD 复现）。最新验证入口见 [ROADMAP.md](ROADMAP.md)。
 
 | 入口 | 文件 |
 |---|---|
 | 恢复工作 | [当前进度.md](当前进度.md) |
+| 人机协作参考 | [Agentic Coding 协作指南](docs/Agentic-Coding协作指南.md) |
 | 评测总入口 | [eval/README.md](eval/README.md) |
 | 迭代规划依据 | [docs/Agent能力与评测全景.md](docs/Agent能力与评测全景.md) |
 | 问题细账 | [eval/reports/问题清单.md](eval/reports/问题清单.md) |
@@ -70,7 +71,7 @@ fit-agent/
 
 ## 技术栈
 
-Python + OpenAI Python SDK（DeepSeek API，模型经 `DEEPSEEK_MODEL` 配置）/ JSONL 文件存储 / 不引入 Agent 框架 / Flask 到 iter-3 端到端时引入
+Python + OpenAI Python SDK（DeepSeek API，模型经 `DEEPSEEK_MODEL` 配置）/ SQLite 存储（V6 起为默认，JsonlStorage 保留为教学对照）/ 不引入 Agent 框架 / Flask 到 iter-3 端到端时引入
 
 ## 验证
 
@@ -82,9 +83,11 @@ Python + OpenAI Python SDK（DeepSeek API，模型经 `DEEPSEEK_MODEL` 配置）
 .venv/bin/python eval/run_intent_eval.py --views discovery --run-mode live --runs 3
 ```
 
-注意：`run_intent_eval.py --views all` 当前**永远返回退出码 1**——数据集里两条 observation tier 恒判 REVIEW，而该 Runner 的退出码把 REVIEW 计为失败。这是已登记未修的 P-007，不是回归。判断是否通过看报告的 `FAIL` 数，不看退出码。
+P-007 已修：五套 Runner 退出码统一为四态契约——只有 `PASS / REVIEW` 返回 0，出现 `FAIL / ERROR` 返回 1。`run_intent_eval.py --views all` 现在返回 0（PASS 56 / REVIEW 2 / FAIL 0）。
 
-四个 Runner 共用 `--runs`（多轮）、`--models`（多模型横向对比）和 `--temperature`（覆盖采样温度），后两个仅 live 生效。报告按 `模型 × 轮次` 分节并汇总 pass@k / pass^k / flaky / token，metadata 记实际生效温度。口径定义见 [eval/stability.py](eval/stability.py)，读法见 [eval/README.md](eval/README.md)。
+计划 Runner 的故障注入属于检测器自测，独立于上述业务门禁：原始结果保留预期 FAIL，只有失败集合完全命中预期才通过；漏检、额外失败或 ERROR 返回 1。
+
+五套 Runner 共用 `--runs`（多轮）、`--models`（多模型横向对比）和 `--temperature`（覆盖采样温度），后两个仅 live 生效。报告按 `模型 × 轮次` 分节并汇总 pass@k / pass^k / flaky / token，metadata 记实际生效温度。口径定义见 [eval/stability.py](eval/stability.py)，读法见 [eval/README.md](eval/README.md)。
 
 `--temperature` 只用于稳定性专项——温度 0 下零波动是必然结果，证明不了波动检测有效，需要故意升温做对照。升温结果不是质量结论，不得进验收报告。
 
@@ -92,6 +95,7 @@ Python + OpenAI Python SDK（DeepSeek API，模型经 `DEEPSEEK_MODEL` 配置）
 .venv/bin/python eval/run_extract_eval.py --views all --run-mode stub --runs 2
 .venv/bin/python eval/run_query_eval.py   --views all --run-mode stub --runs 2
 .venv/bin/python eval/run_tool_eval.py    --views all --run-mode stub --runs 2
+.venv/bin/python eval/run_plan_eval.py    --views all --run-mode stub
 ```
 
 架构对比（真实模型，会花 token）：

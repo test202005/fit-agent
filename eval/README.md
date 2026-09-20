@@ -15,11 +15,15 @@
 | `eval/` | Stub 契约回归和真实模型质量评测 |
 | `backend/logs/` | Router Trace 原始事件 |
 
-当前共有四套评测：意图识别、抽取与受控写入、查询规划与执行、单轮 Tool Use。多步 Agent Loop 和多轮 Memory 尚未实现，因此当前不评测跨步骤推理或跨轮记忆。
+当前共有五套评测：意图识别、抽取与受控写入、查询规划与执行、单轮 Tool Use、训练计划生成（iter-5，planner → tool → generator）。多步 ReAct Loop 和多轮 Memory 尚未实现，因此当前不评测跨步骤推理或跨轮记忆。
+
+训练计划生成是当前唯一跨节点的链路：黑盒只看最终计划，白盒看中间层（需求解析、工具入参、观察回灌）。它的核心指标是 `blackbox_blind_spots`——黑盒断言全绿、白盒抓住问题的条数，用来证明「只看输出」看不见深层错误。
 
 业务默认运行实现已切换为本地 SQLite；评测仍通过 FakeStorage/Stub 保持零 token 和确定性。SQLite 的持久化、隔离、事务、幂等和重启恢复由 `tests/test_storage_sqlite.py` 覆盖，不混入模型质量指标。
 
 ## 2. 目录导航
+
+训练计划当前采用 Generator v3：`target_duration_min` 保留目标，`estimated_duration_min=null` 表示缺少计时依据，`note` 说明限制。旧 `total_min` 响应不再接受；历史报告保留旧口径。自动断言检查目标、未知估时及非空说明，说明是否语义准确需另行复核，原始结果以 `duration_semantic_review=PENDING` 提醒。结构 PASS 不表示目标时长已满足。问题、改法和验证见 [时长一致性实施记录](../docs/训练计划时长一致性-需求与评测场景初稿.md)。
 
 ```text
 eval/
@@ -27,12 +31,15 @@ eval/
 ├── 意图识别评测计划.md
 ├── run_intent_eval.py / run_extract_eval.py
 ├── run_query_eval.py  / run_tool_eval.py
+├── run_plan_eval.py
 ├── stability.py
+├── trace_contract.py / trace_view.py
 ├── datasets/
 │   ├── intent-dataset.jsonl
 │   ├── extract-dataset.jsonl
 │   ├── query-dataset.jsonl
-│   └── tool-dataset.jsonl
+│   ├── tool-dataset.jsonl
+│   └── plan-dataset.jsonl
 ├── methodology/
 │   ├── 断言方法论.md
 │   ├── 数据集实操手册.md
@@ -56,9 +63,10 @@ eval/
 | 拿到需求开始设计数据集 | [数据集实操手册](methodology/数据集实操手册.md) |
 | 统一评测报告和通过率口径 | [评测报告与通过率实操口径](methodology/评测报告与通过率实操口径.md) |
 | 设计并测试 Function Calling | [Tool Use 设计与测试手册](../docs/Tool%20Use设计与测试手册.md) |
-| 查看四套 Case | [`datasets/`](datasets/) 下四个 JSONL |
-| 查看评测实现 | `run_intent/extract/query/tool_eval.py` |
+| 查看四套 Case | [`datasets/`](datasets/) 下五个 JSONL |
+| 查看评测实现 | `run_intent/extract/query/tool/plan_eval.py` |
 | 看稳定性与成本证据 | [稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md) |
+| 处理模型漂移与持续回归 | [模型漂移与持续回归实操方案](methodology/模型漂移与持续回归实操方案.md) |
 | 看已知问题与处理边界 | [问题清单](reports/问题清单.md) |
 | 追溯某次运行 | `results/` 中的报告与逐 Case JSONL，再按 `trace_id` 查 `backend/logs/trace.jsonl` |
 
@@ -127,14 +135,15 @@ Case 最小结构：
 
 Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEEPSEEK_MODEL`。不得输出、记录或提交密钥。
 
-### 抽取、查询和 Tool Use Runner
+### 抽取、查询、Tool Use 和计划生成 Runner
 
-四个 Runner 共用同一组运行矩阵参数，但每套的业务对象和断言不同：
+五套 Runner 共用同一组运行矩阵参数，但每套的业务对象和断言不同：
 
 ```bash
 .venv/bin/python eval/run_extract_eval.py --views all --run-mode stub --runs 2
 .venv/bin/python eval/run_query_eval.py   --views all --run-mode stub --runs 2
 .venv/bin/python eval/run_tool_eval.py    --views all --run-mode stub --runs 2
+.venv/bin/python eval/run_plan_eval.py    --views all --run-mode stub
 ```
 
 | Runner | 主要验证 |
@@ -143,10 +152,33 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 | `run_extract_eval.py` | 抽取字段、三态判定、写入次数和 invalid 保护 |
 | `run_query_eval.py` | 查询计划、执行结果、时间边界和零写入 |
 | `run_tool_eval.py` | 工具选择、参数、调用次数、副作用和首个分歧步骤 |
+| `run_plan_eval.py` | 工具入参是否符合意图、计划是否只来自观察、Trace 契约 |
+
+`run_plan_eval.py` 的 Stub 用 `stub_need` 注入理解错误，验证断言能否检出。故障注入单列为检测器自测，不进入正常回归通过率；命中预期失败集合才算检测器通过，漏检、多出失败或执行异常均阻断退出门禁。原始 Case 仍保留 FAIL，不改成业务 PASS。
+
+计划断言还检查动作不重复、输出肌群符合意图。Trace 契约检查 ID 非空且与请求一致、关键字段类型及必填内容。Viewer 分开显示执行异常与关联的评测失败；断言对应步骤是排查入口，不等于已证明根因。
+
+计划报告记录工作区是否有未提交变更，并保存参与评测的源码、Prompt、数据集快照及 hash（不包含 `.env`）。仅有 HEAD 不能复原未提交代码；该快照也不等于完整运行环境快照。真实模型能力仍需 Live 验证。链路还原用：
+
+```bash
+.venv/bin/python eval/trace_view.py <trace_id>
+```
+
+契约声明在 `eval/trace_contract.py`，按**子序列**匹配——链路多记事件不算违约，声明里有的步骤一步都不能少。
+
+### 可观测性设计边界
+
+当前 Trace 采用本地 JSONL，核心对象是 `trace_id + node + event + payload`，配套 `trace_contract.py` 和 `trace_view.py`。它已经能支持 Case 回溯、Prompt/模型/Token 记录、工具入参检查和评测失败定位。
+
+设计上参考 Langfuse 的对象划分，但不引入 Langfuse 依赖：一次 Case 执行对应 Trace；一次模型调用对应 Generation；一次工具调用对应 Tool；流程步骤对应 Chain 或 Span；断言和人工复核结果独立作为 Score；同一批数据的一次执行作为 Dataset Run。Langfuse 的 Session 只在多轮会话真正出现时再引入。
+
+当前优先补本地结构：`observation_id`、`parent_id`、稳定的 `type/name`、输入输出、起止时间、`dataset_version` 和 `run_id`。这些字段用于让 Trace 可查询、可聚合、可迁移，不代表马上建设观测平台。
+
+接入 Langfuse 或 OpenTelemetry 需要真实触发条件：多人需要查看和检索、需要长期保存和跨版本聚合、需要线上质量监控或告警，或本地 JSONL 已无法支撑数据量。届时先增加导出适配层，保留本地原始证据和当前评测入口；平台接入本身不改变 PASS / FAIL / REVIEW / ERROR 的判定口径。
 
 ### 运行矩阵参数
 
-四个 Runner 共用 `--runs` 和 `--models`：
+五套 Runner 共用 `--runs` 和 `--models`：
 
 | 参数 | 作用 | 备注 |
 |---|---|---|
@@ -170,7 +202,7 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 
 升温跑出的结果**不是质量结论**，不得写进验收报告。已有一次对照实测见 [稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md) 第 4 节。
 
-四个 Runner 的退出码契约已统一：只有 `PASS / REVIEW` 时返回 0，出现 `FAIL / ERROR` 时返回 1。
+五套 Runner 的退出码契约已统一：只有 `PASS / REVIEW` 时返回 0，出现 `FAIL / ERROR` 时返回 1。
 
 ## 5. 报告怎么看
 
@@ -208,4 +240,4 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 
 ## 7. 当前状态
 
-V4.0 Tool Use、V5.0 稳定性与成本口径、V5.1 两模型受控对比均已关账。Flash 与 Pro 已在同一冻结快照下完成四套 Live 三轮对比。准确状态以[当前进度](../当前进度.md)为准；稳定性口径见[稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md)，模型结论见[两模型受控对比评测报告](reports/两模型受控对比评测报告.md)。
+V4.0 Tool Use、V5.0 稳定性与成本口径、V5.1 两模型受控对比均已关账。Flash 与 Pro 已在同一冻结快照下完成四套 Live 三轮对比。iter-5（训练计划生成）已完成 Stub 与 Live 评测，Live 下 Case 级 1.0000、断言级 84/84，核心指标 `blackbox_blind_spots` 为 0；陷阱 Case 的黑盒盲区由 Stub 固定复现。准确状态以[当前进度](../当前进度.md)为准；稳定性口径见[稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md)，模型结论见[两模型受控对比评测报告](reports/两模型受控对比评测报告.md)。

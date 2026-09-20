@@ -1,0 +1,60 @@
+# 当前进度入口
+
+项目既有进度事实源为 [当前进度.md](当前进度.md)，迭代路线见 [总体计划](docs/master-plan.md)。本文件只保留最近验证与恢复入口，不复制历史账本。
+
+## 最近完成
+
+- 2026-09-18 10:16：协作指南通用主稿迁入 [知识库](../weimi/wiki/agentic-coding-collaboration-guide.md)，项目原文改为导航入口；实现、Case 和报告继续在本仓库维护，避免双份正文。
+
+- 2026-09-18 10:10：完成 [Agentic Coding 协作指南 v0.1](docs/Agentic-Coding协作指南.md)，按整体框架、具体用法与时长修复案例、后续迭代原则组织；作为渐进协作参考，不新增自动化或强制流程。
+
+- 2026-09-17 13:26：补齐 [当前可观测能力盘点](eval/reports/V7%20训练计划生成与可观测性迭代复盘.md)，明确现有证据、Viewer 用法、链路覆盖差异及平台能力边界；本次仅更新文档，未改代码。
+
+- 2026-09-17 13:21：按已确认口径完成时长声明修正：目标与未知估时分离，Generator v3 禁止凑时长，补协议反例与实际生成输入 Trace。问题、改法和前后证据统一见 [实施记录](docs/训练计划时长一致性-需求与评测场景初稿.md)。
+
+- 2026-09-17 13:14：完成 [训练计划时长一致性需求与评测场景初稿](docs/训练计划时长一致性-需求与评测场景初稿.md)，核对 Prompt 规则冲突、计时依据缺失和现有断言边界。产出为待评审初稿，业务代码、Prompt 和原 PRD 未改。
+
+## 当前进行中
+
+- 时长声明修正已实现并完成自动验证；待用户核对 Live 原始 note 的语义。数值估时不在本期；本地可观测性字段按实际排查缺口选取，不整批补齐。
+
+- 2026-09-16 11:20：校正 Stub 与 Prompt 效果、去重断言、过程定位及历史版本的证据口径；提交范围见下方清单。
+
+## 后续迭代候选
+
+- 先改进本地可观测性结构：为 Trace 事件增加稳定的 `observation_id`、`parent_id`、`type/name`、输入输出、起止时间、`dataset_version` 和 `run_id`；把模型调用、工具调用、链路步骤与 Score 分开表达。
+- 参考 Langfuse 的 Trace / Observation / Score / Dataset Run 组织方式，但暂不引入 Langfuse SDK、Cloud 或自建平台。当前 JSONL + Viewer 已满足学习和本地评测需要。
+- 只有在多人检索、长期保存、线上质量监控、跨版本聚合或本地 JSONL 的数据规模成为实际瓶颈时，才评估 Langfuse / OpenTelemetry 导出适配层；接入平台不改变现有四态判定和本地原始证据。
+
+- 2026-09-16 09:47：补齐计划动作去重、肌群匹配、Trace ID 与字段值校验；评测失败关联 Trace；故障检测器自测独立计数和门禁；计划报告记录 dirty 状态、源码快照和 hash。未修改业务链路或 Prompt。
+
+## 最近验证
+
+- 2026-09-17 13:21：219 条单测通过；五套 Stub 各 2 轮无业务 FAIL/ERROR，计划故障检测器每轮 2/2；计划 discovery Live 1 轮为 7 PASS / 1 REVIEW、112/112 断言、7,466 Token。AI 助手逐条复核 8 条时长 note 未见无依据达标声明，用户语义验收待完成。[Live 报告](eval/results/plan-report-20260917T052022Z.md)。
+
+- 2026-09-16 11:20：当前断言下 discovery Live 1 轮，Flash 7 PASS / 1 REVIEW / 0 FAIL / 0 ERROR，98/98 断言，8,104 Token；202 条单测通过。`pl-004` 真实模型只生成 1 条动作，原始响应与证据见 [闭环复验](eval/reports/真实BadCase闭环-pl-004.md)。单轮不形成稳定性结论。
+
+- 2026-09-16 09:47：202 条单测通过；五套 Stub 各 2 轮，无业务 FAIL/ERROR，保留观察类 REVIEW；计划检测器每轮 2/2 通过。零 Token，未重跑 Live。报告：[计划回归](eval/results/plan-report-20260916T014731Z.md)。自动产物被 Git 忽略，需本地保留或重新生成。
+- 2026-09-16 09:50：聚焦真实 Bad Case `pl-004` 完成一次闭环回归；当前 v2 为 PASS（黑盒 6/6、白盒 5/5、Trace 11 事件），记录见 [真实 Bad Case 闭环](eval/reports/真实BadCase闭环-pl-004.md)。
+
+## 证据边界与后续
+
+- 已补一轮当前断言下的真实模型观测，未补多轮稳定性验收。`pl-006` 保留 REVIEW。
+- 既有 Live 报告保持历史口径，不用新断言结果替换旧数字。
+- 当前是固定多步编排，不宣称自主 ReAct；v3 保留目标时长，预计时长为 null，不实现动作执行时长重算。历史 `total_min` 报告只验证声明值范围。
+- 后续优先用真实 Bad Case 验证排查闭环，暂不扩成评测平台。
+
+## 待提交范围
+
+以下是工作区内容分组清单，尚未暂存或提交。
+
+| 分组 | 明确文件 | 说明 |
+|---|---|---|
+| Prompt 资产 | `backend/prompts/workout_planner_v1.txt`、`workout_generator_v1.txt`、`workout_generator_v2.txt`、`workout_generator_v3.txt`、`manifest.json`（均在该目录） | 按现有规则单独提交，保留旧版；新 manifest 依赖新增资产 |
+| 实现与评测 | `backend/action_lib.py`、`backend/plan.py`、`backend/llm.py`；`eval/run_plan_eval.py`、`eval/trace_contract.py`、`eval/trace_view.py`、`eval/datasets/plan-dataset.jsonl`；`tests/test_plan_unit.py`、`tests/test_prompt_registry_unit.py` | 同组保留依赖；不能只提交 runner 而遗漏尚未跟踪的业务模块 |
+| 说明与证据 | `CLAUDE.md`、`ROADMAP.md`、`当前进度.md`、`eval/README.md`；`eval/reports/问题清单.md`、`版本演进与问题复盘.md`、`V7 训练计划生成与可观测性迭代复盘.md`、`真实BadCase闭环-pl-004.md`（后四项均在 reports 目录） | 包含既有 V7 记录及本轮校正；自动报告与 Trace 不在版本库内 |
+| 待单独处理 | `docs/prd-iter5-plan-generation.md` | 仍标待评审，勿将实现通过当成 PRD 已获批准 |
+| 本轮排除 | `content/` 的既有文章改动、`eval/methodology/模型漂移与持续回归实操方案.md` | 属于独立内容工作，不混进本轮实现提交 |
+| 本轮排除 | `content/event:start` | 约 207 KB 的原始 SSE 事件文件，含会话标识，非代码依赖；保留原处，未清理 |
+
+验证边界：本轮修改时长输出协议、Generator Prompt、对应断言和测试；最新验证见上方 2026-09-17 记录。提交时还需显式纳入 untracked 文件及 `docs/训练计划时长一致性-需求与评测场景初稿.md`；当前未暂存或提交。当前评测不验证真实训练时长。
