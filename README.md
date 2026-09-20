@@ -32,7 +32,7 @@ LLM 的输出不确定、调用要花钱，于是大多数 Agent 项目的测试
 ### 2. 安装
 
 ```bash
-git clone <this-repo> fit-agent && cd fit-agent
+git clone https://github.com/test202005/fit-agent.git && cd fit-agent
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
