@@ -10,6 +10,8 @@ TEMPERATURE = 0
 MAX_TOKENS = 100
 # 工具调用要吐参数，比分类长；单独一个上限，不影响既有链路
 MAX_TOOL_TOKENS = 500
+# 训练计划是结构化长输出，比工具参数还长；同样单独一个上限
+MAX_PLAN_TOKENS = 600
 TIMEOUT_SECONDS = 30.0
 MAX_RETRIES = 0
 THINKING_MODE = "disabled"
@@ -89,6 +91,7 @@ class LiveLLM:
         api_key: str | None = None,
         model: str | None = None,
         temperature: float | None = None,
+        max_tokens: int | None = None,
     ) -> None:
         from openai import OpenAI
 
@@ -98,6 +101,8 @@ class LiveLLM:
         self.model = model or os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
         # 默认沿用全局 0；只有稳定性专项需要故意升温制造波动，用来验证波动检测本身
         self.temperature = TEMPERATURE if temperature is None else temperature
+        # 输出长度上限按链路给：分类要 100，计划生成要 600，不能共用一个常量
+        self.max_tokens = max_tokens or MAX_TOKENS
         self._client = OpenAI(
             api_key=key,
             base_url="https://api.deepseek.com",
@@ -117,7 +122,7 @@ class LiveLLM:
                 ],
                 response_format={"type": "json_object"},
                 temperature=self.temperature,
-                max_tokens=MAX_TOKENS,
+                max_tokens=self.max_tokens,
                 extra_body={"thinking": {"type": THINKING_MODE}},
             )
         except APITimeoutError as exc:
@@ -178,6 +183,7 @@ class StubLLM:
         tool_calls: list[ToolCall] | None = None,
         text: str = "",
         usage: Usage | None = None,
+        raw_texts: list[str] | None = None,
     ) -> None:
         self.model = "stub"
         self._raw_text = raw_text
@@ -186,6 +192,9 @@ class StubLLM:
         self._text = text
         # 默认不带 usage：stub 不花 token，成本口径只在 live 下成立
         self._usage = usage
+        # 多节点链路（解析 → 生成）需要按序应答；用完最后一档就停在那一档
+        self._raw_texts = list(raw_texts or [])
+        self._calls = 0
 
     def complete(self, system_prompt: str, user_text: str) -> LLMResult:
         if self._fault == "llm_timeout":
@@ -194,6 +203,10 @@ class StubLLM:
             raise LLMApiError
         if self._fault == "llm_parse_error":
             return LLMResult(raw_text="not-json", usage=self._usage)
+        if self._raw_texts:
+            index = min(self._calls, len(self._raw_texts) - 1)
+            self._calls += 1
+            return LLMResult(raw_text=self._raw_texts[index], usage=self._usage)
         return LLMResult(raw_text=self._raw_text, usage=self._usage)
 
     def complete_with_tools(

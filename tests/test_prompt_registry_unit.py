@@ -7,7 +7,14 @@ from backend import prompt_registry
 
 def test_all_registered_prompts_are_loadable():
     manifest = json.loads(prompt_registry.MANIFEST_PATH.read_text(encoding="utf-8"))
-    assert set(manifest) == {"intent_router", "extractor", "query_planner", "agent_system"}
+    assert set(manifest) == {
+        "intent_router",
+        "extractor",
+        "query_planner",
+        "agent_system",
+        "workout_planner",
+        "workout_generator",
+    }
     for name, entry in manifest.items():
         asset = prompt_registry.load_prompt_asset(name)
         assert asset.name == name
