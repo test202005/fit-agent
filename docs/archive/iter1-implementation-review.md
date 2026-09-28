@@ -3,7 +3,7 @@
 > 状态：已完成整改并验收
 > Review 日期：2026-07-19
 > Review 对象：iter-1 全部实现（backend/ eval/ tests/ + 评测报告）
-> Review 方法：初审对照 [prd-iter1-intent.md](prd-iter1-intent.md) v3 与 [architecture-iter1.md](architecture-iter1.md) v3 逐项核对；confidence 决议批准后按 PRD v4 复核；单测与 Stub 回归由评审人本机复跑验证；评测报告按 Prompt hash 时间线交叉核对
+> Review 方法：初审对照 [prd-iter1-intent.md](../prd-iter1-intent.md) v3 与 [architecture-iter1.md](architecture-iter1.md) v3 逐项核对；confidence 决议批准后按 PRD v4 复核；单测与 Stub 回归由评审人本机复跑验证；评测报告按 Prompt hash 时间线交叉核对
 > 结论先行：**Iteration 1已完成整改并通过退出门禁**。当前版本从基线commit `0083525`起可追溯，最终评测运行版本为`1a61947`；此前五版Prompt原文仍无法恢复，作为历史限制保留。
 
 ---

@@ -1,7 +1,7 @@
 # architecture — Iteration 1 意图识别
 
 > 状态：v3——技术方案已确认，DeepSeek V4 基线，可开工
-> 上游：[prd-iter1-intent.md](prd-iter1-intent.md) v3（业务口径唯一事实源，本文与其冲突时改本文）
+> 上游：[prd-iter1-intent.md](../prd-iter1-intent.md) v3（业务口径唯一事实源，本文与其冲突时改本文）
 > 范围：仅 iter-1 实现设计。extractor / storage / query / HTTP 的架构等对应迭代再补。
 > 尺度：个人作品项目，以支撑当前评测闭环为准，不按生产级平台建设。
 

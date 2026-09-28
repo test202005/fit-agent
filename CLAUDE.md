@@ -2,7 +2,7 @@
 
 ## 项目定位
 
-可测试的健身 Agent 参考实现。消费者侧验证“用一句自然语言低摩擦记录和查询训练”的产品价值；AI 测试侧从第一条能力开始内建 trace、测试钩子和评测集，保证自然语言入口不会以错误记录和不可追溯为代价。业务全貌与目标人群见 [docs/product-overview.md](docs/product-overview.md)。
+健身新手的口袋搭子（2026-09-25 起的定位）：说一句话，安排今天练什么、记下练了什么、看这周练得够不够、讲清动作怎么做。AI 测试侧从第一条能力开始内建 trace、测试钩子和评测集，同时作为「AI 产品怎么测」的公开样本。定位、目标人群与不做什么见 [docs/产品介绍.md](docs/产品介绍.md)。
 
 双重目标：
 1. 复演/验证 Agent 测试方法论（意图路由评测、多轮测试、断言引擎），沉淀可复用的评测脚手架
@@ -14,23 +14,20 @@
 
 **V7.0 已实现固定多步训练计划生成与可观测性，尚非自主 ReAct；V5.0 稳定性与成本口径、V5.1 两模型受控对比、V6 SQLite 持久化均已验收。**
 
-权威事实源是 [当前进度.md](当前进度.md)——本节只给稳定坐标，具体进度以那份为准，两边冲突时以 `当前进度.md` 为准。
+进度唯一来源是 [ROADMAP.md](ROADMAP.md)——本节只给稳定坐标，具体进度以那份为准，两边冲突时以 ROADMAP 为准。
 
 已实现的迭代：iter-1 意图识别（`1a61947`）、iter-2 抽取与受控写入、iter-3 查询与 Clock 注入、iter-4 工具调用与双架构对比、iter-5 训练计划生成。最新验证入口见 [ROADMAP.md](ROADMAP.md)。
 
 | 入口 | 文件 |
 |---|---|
-| 恢复工作 | [当前进度.md](当前进度.md) |
-| 人机协作参考 | [Agentic Coding 协作指南](docs/Agentic-Coding协作指南.md) |
+| 恢复工作 | [ROADMAP.md](ROADMAP.md) |
 | 设计基调 | [docs/AI-Native设计基调.md](docs/AI-Native设计基调.md)：AI Native 四层划分、已做与遗留、探索记录 |
 | 产品介绍（用户视角） | [docs/产品介绍.md](docs/产品介绍.md)：为什么用、解决哪些痛点、怎么用、不做什么 |
 | 当前能力 | [docs/当前能力清单.md](docs/当前能力清单.md)：现在能做什么、示例、边界 |
 | 评测总入口 | [eval/README.md](eval/README.md) |
 | 本地调试台 | `python -m backend.app` 后打开 `localhost:5001/console`：用户视角（聊天＋面板）与评测视角（Trace）对照；实现在 `backend/console.py`、`backend/static/` |
-| 学习与评测实践总纲 | [docs/Agent能力与评测全景.md](docs/Agent能力与评测全景.md)，含原开发练手路线；产品范围仍以 master-plan 和专项 PRD 为准 |
 | 问题细账 | [eval/reports/问题清单.md](eval/reports/问题清单.md) |
 | 版本主线 | [eval/reports/版本演进与问题复盘.md](eval/reports/版本演进与问题复盘.md) |
-| 内容系列总纲 | [content/系列大纲.md](content/系列大纲.md) |
 
 SDK 使用 OpenAI Python SDK 兼容 DeepSeek API，模型默认 `deepseek-v4-flash`（另有 `deepseek-v4-pro` 可用于多模型对比）。总纲见 [docs/master-plan.md](docs/master-plan.md)（v4），Phase 1 总需求见 [docs/prd.md](docs/prd.md)（v2）。
 

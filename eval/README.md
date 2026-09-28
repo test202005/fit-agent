@@ -23,7 +23,7 @@
 
 ## 2. 目录导航
 
-训练计划当前采用 Generator v3：`target_duration_min` 保留目标，`estimated_duration_min=null` 表示缺少计时依据，`note` 说明限制。旧 `total_min` 响应不再接受；历史报告保留旧口径。自动断言检查目标、未知估时及非空说明，说明是否语义准确需另行复核，原始结果以 `duration_semantic_review=PENDING` 提醒。结构 PASS 不表示目标时长已满足。问题、改法和验证见 [时长一致性实施记录](../docs/训练计划时长一致性-需求与评测场景初稿.md)。
+训练计划当前采用 Generator v3：`target_duration_min` 保留目标，`estimated_duration_min=null` 表示缺少计时依据，`note` 说明限制。旧 `total_min` 响应不再接受；历史报告保留旧口径。自动断言检查目标、未知估时及非空说明，说明是否语义准确需另行复核，原始结果以 `duration_semantic_review=PENDING` 提醒。结构 PASS 不表示目标时长已满足。问题、改法和验证见 [时长一致性实施记录](../docs/archive/训练计划时长一致性-需求与评测场景初稿.md)。
 
 ```text
 eval/
@@ -56,13 +56,12 @@ eval/
 
 | 想做什么 | 入口 |
 |---|---|
-| 看当前项目评测状态 | [当前进度](../当前进度.md) |
-| 开始新一轮意图评测 | [意图识别评测计划](意图识别评测计划.md) |
+| 看当前项目评测状态 | [ROADMAP](../ROADMAP.md) |
+| 开始新一轮意图评测 | [意图识别评测计划](archive/意图识别评测计划.md) |
 | 看 Iteration 1 最终结论 | [正式报告](reports/迭代一意图识别评测报告.md) |
 | 理解当前 100% 的适用边界 | [数据集设计方法](methodology/意图识别数据集设计方法.md) |
 | 拿到需求开始设计数据集 | [数据集实操手册](methodology/数据集实操手册.md) |
 | 统一评测报告和通过率口径 | [评测报告与通过率实操口径](methodology/评测报告与通过率实操口径.md) |
-| 设计并测试 Function Calling | [Tool Use 设计与测试手册](../docs/Tool%20Use设计与测试手册.md) |
 | 查看四套 Case | [`datasets/`](datasets/) 下五个 JSONL |
 | 查看评测实现 | `run_intent/extract/query/tool/plan_eval.py` |
 | 看稳定性与成本证据 | [稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md) |
@@ -80,7 +79,7 @@ eval/
 | `locked` | Iteration 1 小型验收集；不是严格独立盲测 | 验收阶段否；已暴露 Case 应转 regression |
 | `regression` | 已修复 Bad Case 的长期回归 | 可以修，但 Case 永久保留 |
 
-严格泛化评估需要后续新增独立 `blind_holdout`。具体 Review 项和执行门禁见[意图识别评测计划](意图识别评测计划.md)，分层依据见[数据集方法](methodology/意图识别数据集设计方法.md)。
+严格泛化评估需要后续新增独立 `blind_holdout`。具体 Review 项和执行门禁见[意图识别评测计划](archive/意图识别评测计划.md)，分层依据见[数据集方法](methodology/意图识别数据集设计方法.md)。
 
 Case 最小结构：
 
@@ -246,4 +245,4 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 
 ## 7. 当前状态
 
-V4.0 Tool Use、V5.0 稳定性与成本口径、V5.1 两模型受控对比均已验收。Flash 与 Pro 已在同一冻结快照下完成四套 Live 三轮对比。iter-5（训练计划生成）已完成 Stub 与 Live 评测，Live 下 Case 级 1.0000、断言级 84/84，核心指标 `blackbox_blind_spots` 为 0；陷阱 Case 的黑盒盲区由 Stub 固定复现。准确状态以[当前进度](../当前进度.md)为准；稳定性口径见[稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md)，模型结论见[两模型受控对比评测报告](reports/两模型受控对比评测报告.md)。
+V4.0 Tool Use、V5.0 稳定性与成本口径、V5.1 两模型受控对比均已验收。Flash 与 Pro 已在同一冻结快照下完成四套 Live 三轮对比。iter-5（训练计划生成）已完成 Stub 与 Live 评测，Live 下 Case 级 1.0000、断言级 84/84，核心指标 `blackbox_blind_spots` 为 0；陷阱 Case 的黑盒盲区由 Stub 固定复现。准确状态以 [ROADMAP](../ROADMAP.md) 为准；稳定性口径见[稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md)，模型结论见[两模型受控对比评测报告](reports/两模型受控对比评测报告.md)。
