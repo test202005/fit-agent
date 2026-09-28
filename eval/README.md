@@ -144,6 +144,7 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 .venv/bin/python eval/run_query_eval.py   --views all --run-mode stub --runs 2
 .venv/bin/python eval/run_tool_eval.py    --views all --run-mode stub --runs 2
 .venv/bin/python eval/run_plan_eval.py    --views all --run-mode stub
+.venv/bin/python eval/run_routine_eval.py --views all --run-mode stub --runs 2
 ```
 
 | Runner | 主要验证 |
@@ -153,6 +154,10 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 | `run_query_eval.py` | 查询计划、执行结果、时间边界和零写入 |
 | `run_tool_eval.py` | 工具选择、参数、调用次数、副作用和首个分歧步骤 |
 | `run_plan_eval.py` | 工具入参是否符合意图、计划是否只来自观察、Trace 契约 |
+| `run_routine_eval.py` | 训练安排调整顺序：分层判定首次协议、首次顺序、写尝试次数与最终状态；「首次被拒、重试成功」记 REVIEW 单列，见 [V8 PRD](../docs/prd-v8-routine-reorder.md) |
+| `run_plan_v2_eval.py` | 训练计划 V10 三组对照（v7 / llm_only / v2）：以 Case truth 判红线 R1–R6 与数据 D1–D4（FAIL），指引 G1、G2、G5（REVIEW）；只支持 Live，编排逻辑由 `tests/test_plan_v2_unit.py` 用 Stub 覆盖。见 [V10 PRD](../docs/prd-v10-plan-generation-v2.md) |
+
+网页版 Trace：`.venv/bin/python eval/trace_web.py` 生成 `eval/results/trace-view.html` 并打开；左侧按链路筛选，右侧看结论、操作前后状态和执行步骤表，点 ＋ 展开完整输入输出。终端版仍用 `eval/trace_view.py`。
 
 `run_plan_eval.py` 的 Stub 用 `stub_need` 注入理解错误，验证断言能否检出。故障注入单列为检测器自测，不进入正常回归通过率；命中预期失败集合才算检测器通过，漏检、多出失败或执行异常均阻断退出门禁。原始 Case 仍保留 FAIL，不改成业务 PASS。
 
@@ -240,4 +245,4 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 
 ## 7. 当前状态
 
-V4.0 Tool Use、V5.0 稳定性与成本口径、V5.1 两模型受控对比均已关账。Flash 与 Pro 已在同一冻结快照下完成四套 Live 三轮对比。iter-5（训练计划生成）已完成 Stub 与 Live 评测，Live 下 Case 级 1.0000、断言级 84/84，核心指标 `blackbox_blind_spots` 为 0；陷阱 Case 的黑盒盲区由 Stub 固定复现。准确状态以[当前进度](../当前进度.md)为准；稳定性口径见[稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md)，模型结论见[两模型受控对比评测报告](reports/两模型受控对比评测报告.md)。
+V4.0 Tool Use、V5.0 稳定性与成本口径、V5.1 两模型受控对比均已验收。Flash 与 Pro 已在同一冻结快照下完成四套 Live 三轮对比。iter-5（训练计划生成）已完成 Stub 与 Live 评测，Live 下 Case 级 1.0000、断言级 84/84，核心指标 `blackbox_blind_spots` 为 0；陷阱 Case 的黑盒盲区由 Stub 固定复现。准确状态以[当前进度](../当前进度.md)为准；稳定性口径见[稳定性与成本口径评测报告](reports/稳定性与成本口径评测报告.md)，模型结论见[两模型受控对比评测报告](reports/两模型受控对比评测报告.md)。

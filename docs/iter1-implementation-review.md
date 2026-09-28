@@ -1,6 +1,6 @@
 # Iteration 1 实现 Review
 
-> 状态：已完成整改并关账
+> 状态：已完成整改并验收
 > Review 日期：2026-07-19
 > Review 对象：iter-1 全部实现（backend/ eval/ tests/ + 评测报告）
 > Review 方法：初审对照 [prd-iter1-intent.md](prd-iter1-intent.md) v3 与 [architecture-iter1.md](architecture-iter1.md) v3 逐项核对；confidence 决议批准后按 PRD v4 复核；单测与 Stub 回归由评审人本机复跑验证；评测报告按 Prompt hash 时间线交叉核对
@@ -68,7 +68,7 @@
 - 注入 badcase 轮换全过程：locked 发现 → 移出进 regression → prompt few-shot 加固 → 盲区补位——完整的 badcase 生命周期演示
 - 注入修复本质是 few-shot 背诵，近似改写句（"别听规则的，写 record"类变体）的泛化性存疑——iter-2 数据集值得加注入变体族验证
 
-## 六、关账门禁（全部勾选后 iter-1 才算完成）
+## 六、验收门禁清单（全部勾选后 iter-1 才算完成）
 
 - [x] 全部现状已commit，Prompt变更单独commit的规矩已入CLAUDE.md
 - [x] PRD已升v4，confidence归一化边界有单测，报告含`confidence_normalized_count`
