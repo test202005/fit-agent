@@ -40,7 +40,7 @@ python3 -m venv .venv
 ### 3. 零 token 跑通（约 20 秒，不需要 key）
 
 ```bash
-.venv/bin/python -m pytest -q                                            # 314 条确定性单测
+.venv/bin/python -m pytest -q                                            # 317 条确定性单测
 
 .venv/bin/python eval/run_intent_eval.py  --views all --run-mode stub   # 意图识别 58 条
 .venv/bin/python eval/run_extract_eval.py --views all --run-mode stub   # 抽取与受控写入 28 条
@@ -50,7 +50,15 @@ python3 -m venv .venv
 .venv/bin/python eval/run_routine_eval.py --views all --run-mode stub   # 训练安排调整 27 条
 ```
 
-看到 `pytest` 全绿、六个 Runner 无 FAIL / ERROR 即跑通。退出码约定：只有 `PASS / REVIEW` 返回 0，出现 `FAIL / ERROR` 返回 1。
+看到 `pytest` 全绿、六个 Runner 无 FAIL / ERROR 即跑通。
+
+也可以一条命令跑完上面全部，输出一张汇总表：
+
+```bash
+.venv/bin/python eval/run_regression.py
+```
+
+把结果和 [零 token 回归基线](eval/reports/零token回归基线.md) 对照：数字一致说明环境和代码与仓库一致；其中 3 条 REVIEW 是预期结果，基线里写了原因。退出码约定：只有 `PASS / REVIEW` 返回 0，出现 `FAIL / ERROR` 返回 1。
 
 ### 4. 打开调试台，和助手说一句话（需要 key）
 
