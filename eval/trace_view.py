@@ -37,7 +37,22 @@ PAYLOAD_KEYS = {
     ("generator", "parse_result"): ("ok", "total_min", "target_duration_min", "estimated_duration_min", "action_count"),
     ("generator", "result"): ("ok", "action_count"),
     ("planner", "result"): ("ok", "error_code"),
+    ("routine", "request"): ("text",),
+    ("routine", "routine_request"): ("model", "prompt_version", "prompt_hash", "case_id", "fixture", "arm"),
+    ("llm", "llm_round"): ("round", "tool_calls", "text", "duration_ms", "usage"),
+    ("tool", "tool_attempt"): ("round", "attempt", "tool", "args", "ok", "error_code", "message"),
+    ("routine", "result"): ("ok", "error_code", "rounds", "writes", "text"),
+    ("eval", "evaluation"): ("verdict", "failures"),
 }
+
+STATE_EVENTS = {"state_before", "state_after"}
+
+
+def format_units(units: list[dict[str, Any]]) -> str:
+    """全量顺序一行看完：paused 单元加括号，一眼看出可见与不可见。"""
+    return " → ".join(
+        u["unit_id"] if u.get("status") == "active" else f"({u['unit_id']})" for u in units
+    )
 
 ERROR_EVENTS = {"result"}
 
@@ -67,6 +82,8 @@ def pick(events: list[dict[str, Any]], trace_id: str) -> list[dict[str, Any]]:
 def summarize(event: dict[str, Any]) -> str:
     keys = PAYLOAD_KEYS.get((event["node"], event["event"]))
     payload = event.get("payload") or {}
+    if event["node"] == "state" and event["event"] in STATE_EVENTS:
+        return format_units(payload.get("units") or [])
     if keys is None:
         return json.dumps(payload, ensure_ascii=False)
     picked = {key: payload[key] for key in keys if key in payload}
@@ -85,9 +102,11 @@ def render(trace_id: str, events: list[dict[str, Any]]) -> str:
     first_error = None
     for event in events:
         marker = " "
+        payload = event.get("payload") or {}
         if event["node"] == "tool" and event["event"] == "tool_call":
             marker = "*"  # 工具入参：白盒的落点
-        payload = event.get("payload") or {}
+        elif event["node"] == "tool" and event["event"] == "tool_attempt":
+            marker = "*" if payload.get("ok") else "!"  # ! 为被拒的尝试
         if event["event"] in ERROR_EVENTS and payload.get("ok") is False and first_error is None:
             first_error = f"{event['node']}/{event['event']}"
         lines.append(
@@ -109,6 +128,24 @@ def render(trace_id: str, events: list[dict[str, Any]]) -> str:
             lines.append(f"- 评测失败步骤：{failure['step']}，断言：{failure['check']}")
     else:
         lines.append("- 评测结果：未关联")
+    attempts = [e["payload"] for e in events if e["node"] == "tool" and e["event"] == "tool_attempt"]
+    writes = [a for a in attempts if a["tool"] == "set_routine_order"]
+    if attempts:
+        states = {e["event"]: e["payload"].get("units") or [] for e in events
+                  if e["node"] == "state" and e["event"] in STATE_EVENTS}
+        before = states.get("state_before", [])
+        lines.append(f"- 操作前全量顺序：{format_units(before)}（括号为 paused）")
+        for a in writes:
+            order = (a.get("args") or {}).get("order") or []
+            missing = [u["unit_id"] for u in before if u["unit_id"] not in order]
+            status = "通过" if a["ok"] else f"被拒 {a.get('error_code')}"
+            lines.append(
+                f"- 第 {a['round']} 轮 写入第 {a['attempt']} 次：{status}；提交 {len(order)} 项"
+                + (f"，缺 {', '.join(missing)}" if missing else "")
+            )
+        if writes and not writes[0]["ok"] and any(w["ok"] for w in writes):
+            lines.append("- 首次写入被拒、重试后成功：端到端结果看不出这次失败")
+        lines.append(f"- 操作后全量顺序：{format_units(states.get('state_after', []))}")
     tool_calls = [e for e in events if e["node"] == "tool" and e["event"] == "tool_call"]
     if tool_calls:
         args = tool_calls[0]["payload"]["arguments"]

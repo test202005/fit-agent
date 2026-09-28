@@ -1,0 +1,101 @@
+{
+  "base7": [
+    {
+      "unit_id": "chest",
+      "name": "胸日",
+      "status": "active"
+    },
+    {
+      "unit_id": "back",
+      "name": "背日",
+      "status": "active"
+    },
+    {
+      "unit_id": "mobility",
+      "name": "灵活性恢复",
+      "status": "paused"
+    },
+    {
+      "unit_id": "legs",
+      "name": "腿日",
+      "status": "active"
+    },
+    {
+      "unit_id": "shoulders",
+      "name": "肩日",
+      "status": "active"
+    },
+    {
+      "unit_id": "cardio",
+      "name": "有氧",
+      "status": "paused"
+    },
+    {
+      "unit_id": "core",
+      "name": "核心",
+      "status": "active"
+    }
+  ],
+  "base12": [
+    {
+      "unit_id": "push",
+      "name": "推日",
+      "status": "active"
+    },
+    {
+      "unit_id": "pull",
+      "name": "拉日",
+      "status": "active"
+    },
+    {
+      "unit_id": "legs",
+      "name": "腿日",
+      "status": "active"
+    },
+    {
+      "unit_id": "cardio",
+      "name": "有氧",
+      "status": "paused"
+    },
+    {
+      "unit_id": "arms",
+      "name": "手臂",
+      "status": "active"
+    },
+    {
+      "unit_id": "core",
+      "name": "核心",
+      "status": "active"
+    },
+    {
+      "unit_id": "mobility",
+      "name": "灵活性恢复",
+      "status": "paused"
+    },
+    {
+      "unit_id": "glutes",
+      "name": "臀腿强化",
+      "status": "active"
+    },
+    {
+      "unit_id": "hiit",
+      "name": "间歇冲刺",
+      "status": "paused"
+    },
+    {
+      "unit_id": "back_width",
+      "name": "背部宽度",
+      "status": "active"
+    },
+    {
+      "unit_id": "stretch",
+      "name": "拉伸放松",
+      "status": "paused"
+    },
+    {
+      "unit_id": "shoulders",
+      "name": "肩日",
+      "status": "active"
+    }
+  ]
+}

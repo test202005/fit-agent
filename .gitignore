@@ -8,3 +8,7 @@ __pycache__/
 backend/logs/
 eval/results/
 data/
+.tmp/
+!backend/data/
+backend/data/*
+!backend/data/action_library_v2.json

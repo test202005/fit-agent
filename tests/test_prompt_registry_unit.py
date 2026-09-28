@@ -14,6 +14,11 @@ def test_all_registered_prompts_are_loadable():
         "agent_system",
         "workout_planner",
         "workout_generator",
+        "routine_agent",
+        "assistant",
+        "plan_need",
+        "plan_compose",
+        "plan_llm_only",
     }
     for name, entry in manifest.items():
         asset = prompt_registry.load_prompt_asset(name)

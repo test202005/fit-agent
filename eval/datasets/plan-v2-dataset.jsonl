@@ -1,0 +1,15 @@
+{"case_id": "pv-01", "input": "三十分钟减脂训练，新手，在家没器械", "expect": "plan", "truth": {"level": "新手", "duration_min": 30, "available": [], "parts": [], "exclusions": []}, "category": "减脂-徒手"}
+{"case_id": "pv-02", "input": "三十分钟减脂训练，新手，家里有哑铃", "expect": "plan", "truth": {"level": "新手", "duration_min": 30, "available": ["哑铃"], "parts": [], "exclusions": []}, "category": "减脂-家用"}
+{"case_id": "pv-03", "input": "四十五分钟增肌训练，我是进阶水平，在健身房", "expect": "plan", "truth": {"level": "进阶", "duration_min": 45, "available": "gym", "parts": [], "exclusions": []}, "category": "增肌-健身房"}
+{"case_id": "pv-04", "input": "二十分钟核心训练，新手，没有器械", "expect": "plan", "truth": {"level": "新手", "duration_min": 20, "available": [], "parts": ["核心"], "exclusions": []}, "category": "核心-徒手"}
+{"case_id": "pv-05", "input": "出差住酒店，只有一张床，想练二十分钟", "expect": "plan", "truth": {"level": "新手", "duration_min": 20, "available": [], "parts": [], "exclusions": []}, "category": "口语-酒店"}
+{"case_id": "pv-06", "input": "想练练胸和背，三十分钟，家里有哑铃和凳子，新手", "expect": "plan", "truth": {"level": "新手", "duration_min": 30, "available": ["哑铃", "凳子"], "parts": ["胸", "背"], "exclusions": []}, "category": "多部位-家用"}
+{"case_id": "pv-07", "input": "在健身房练腿，四十分钟，我是新手", "expect": "plan", "truth": {"level": "新手", "duration_min": 40, "available": "gym", "parts": ["下肢"], "exclusions": []}, "category": "部位-健身房"}
+{"case_id": "pv-08", "input": "三十分钟全身训练，不要跳跃动作，家里没器械，新手", "expect": "plan", "truth": {"level": "新手", "duration_min": 30, "available": [], "parts": [], "exclusions": ["跳跃"]}, "category": "排除项"}
+{"case_id": "pv-09", "input": "下班想放松一下，做十五分钟拉伸，没器械", "expect": "plan", "truth": {"level": "新手", "duration_min": 15, "available": [], "parts": [], "exclusions": []}, "category": "灵活-徒手"}
+{"case_id": "pv-10", "input": "二十五分钟练肩，进阶，家里有哑铃和弹力带", "expect": "plan", "truth": {"level": "进阶", "duration_min": 25, "available": ["哑铃", "弹力带"], "parts": ["肩"], "exclusions": []}, "category": "部位-家用-进阶"}
+{"case_id": "pv-11", "input": "想练翘臀，三十分钟，在健身房，新手", "expect": "plan", "truth": {"level": "新手", "duration_min": 30, "available": "gym", "parts": ["臀"], "exclusions": []}, "category": "口语-部位"}
+{"case_id": "pv-12", "input": "膝盖疼，想练腿，三十分钟，在家没器械", "expect": "refer", "truth": {"level": "新手", "duration_min": 30, "available": [], "parts": ["下肢"], "exclusions": []}, "category": "健康状况"}
+{"case_id": "pv-13", "input": "我怀孕五个月了，想在家做二十分钟运动，没有器械", "expect": "refer", "truth": {"level": "新手", "duration_min": 20, "available": [], "parts": [], "exclusions": []}, "category": "健康状况"}
+{"case_id": "pv-14", "input": "生成一个三十分钟的减脂训练", "expect": "clarify", "truth": {"level": "新手", "duration_min": 30, "available": null, "parts": [], "exclusions": []}, "category": "未说明器械"}
+{"case_id": "pv-15", "input": "给我来个半小时的训练，新手", "expect": "clarify", "truth": {"level": "新手", "duration_min": 30, "available": null, "parts": [], "exclusions": []}, "category": "未说明器械"}

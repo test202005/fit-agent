@@ -68,6 +68,8 @@ class ToolCall:
     name: str
     arguments: dict
     raw_arguments: str = ""
+    # 多轮循环回灌工具结果时要按 id 对应；单轮链路用不到
+    id: str = ""
 
 
 @dataclass(frozen=True)
@@ -154,25 +156,51 @@ class LiveLLM:
         except APIError as exc:
             raise LLMApiError from exc
 
-        message = response.choices[0].message
-        calls = []
-        for call in getattr(message, "tool_calls", None) or []:
-            raw = call.function.arguments or "{}"
-            try:
-                parsed = json.loads(raw)
-            except json.JSONDecodeError:
-                # 参数不是合法 JSON：保留原文交给上层判失败，不在这里吞掉
-                parsed = None
-            calls.append(
-                ToolCall(
-                    name=call.function.name,
-                    arguments=parsed if isinstance(parsed, dict) else {},
-                    raw_arguments=raw,
-                )
+        return _tool_call_result(response)
+
+    def complete_with_messages(
+        self, messages: list[dict], tools: list[dict]
+    ) -> ToolCallResult:
+        """多轮工具循环用：调用方维护完整消息序列（含工具结果回灌）。"""
+        from openai import APIError, APITimeoutError
+
+        try:
+            response = self._client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                tools=tools,
+                temperature=self.temperature,
+                max_tokens=MAX_TOOL_TOKENS,
+                extra_body={"thinking": {"type": THINKING_MODE}},
             )
-        return ToolCallResult(
-            tool_calls=calls, text=message.content or "", usage=read_usage(response)
+        except APITimeoutError as exc:
+            raise LLMTimeout from exc
+        except APIError as exc:
+            raise LLMApiError from exc
+        return _tool_call_result(response)
+
+
+def _tool_call_result(response: Any) -> ToolCallResult:
+    message = response.choices[0].message
+    calls = []
+    for call in getattr(message, "tool_calls", None) or []:
+        raw = call.function.arguments or "{}"
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            # 参数不是合法 JSON：保留原文交给上层判失败，不在这里吞掉
+            parsed = None
+        calls.append(
+            ToolCall(
+                name=call.function.name,
+                arguments=parsed if isinstance(parsed, dict) else {},
+                raw_arguments=raw,
+                id=call.id or "",
+            )
         )
+    return ToolCallResult(
+        tool_calls=calls, text=message.content or "", usage=read_usage(response)
+    )
 
 
 class StubLLM:
@@ -184,6 +212,7 @@ class StubLLM:
         text: str = "",
         usage: Usage | None = None,
         raw_texts: list[str] | None = None,
+        tool_rounds: list[ToolCallResult] | None = None,
     ) -> None:
         self.model = "stub"
         self._raw_text = raw_text
@@ -195,6 +224,9 @@ class StubLLM:
         # 多节点链路（解析 → 生成）需要按序应答；用完最后一档就停在那一档
         self._raw_texts = list(raw_texts or [])
         self._calls = 0
+        # 多轮工具循环按轮应答；剧本用完后返回纯文本，循环自然结束
+        self._tool_rounds = list(tool_rounds or [])
+        self.received_messages: list[list[dict]] = []
 
     def complete(self, system_prompt: str, user_text: str) -> LLMResult:
         if self._fault == "llm_timeout":
@@ -219,3 +251,16 @@ class StubLLM:
         return ToolCallResult(
             tool_calls=list(self._tool_calls), text=self._text, usage=self._usage
         )
+
+    def complete_with_messages(
+        self, messages: list[dict], tools: list[dict]
+    ) -> ToolCallResult:
+        if self._fault == "llm_timeout":
+            raise LLMTimeout
+        if self._fault == "llm_api_error":
+            raise LLMApiError
+        self.received_messages.append([dict(m) for m in messages])
+        index = len(self.received_messages) - 1
+        if index < len(self._tool_rounds):
+            return self._tool_rounds[index]
+        return ToolCallResult(tool_calls=[], text=self._text, usage=self._usage)

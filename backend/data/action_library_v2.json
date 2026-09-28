@@ -1,0 +1,1803 @@
+{
+ "version": "v2",
+ "source": "docs/动作库-v2-草稿.md",
+ "actions": [
+  {
+   "id": "march_in_place",
+   "name": "原地踏步",
+   "type": "热身",
+   "parts": [
+    "全身"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 60,
+   "unilateral": false,
+   "goals": [
+    "减脂",
+    "灵活"
+   ],
+   "cue": "抬膝到舒适高度，配合摆臂",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "arm_circles",
+   "name": "手臂绕环",
+   "type": "热身",
+   "parts": [
+    "肩"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": false,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "由小到大画圈，前后各半",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "hip_circles",
+   "name": "髋关节环绕",
+   "type": "热身",
+   "parts": [
+    "下肢"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": false,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "双手叉腰，幅度适中，不憋气",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "lunge_twist",
+   "name": "弓步转体",
+   "type": "热身",
+   "parts": [
+    "下肢",
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "转体来自胸椎，前膝对准脚尖",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "cat_cow",
+   "name": "猫牛式",
+   "type": "热身",
+   "parts": [
+    "背",
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 4,
+   "unilateral": false,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "跪撑，配合呼吸缓慢屈伸脊柱",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "inchworm",
+   "name": "毛毛虫爬行",
+   "type": "热身",
+   "parts": [
+    "全身"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 6,
+   "unilateral": false,
+   "goals": [
+    "灵活",
+    "减脂"
+   ],
+   "cue": "腘绳肌紧可屈膝，手走出时不塌腰",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "step_jack",
+   "name": "无跳开合",
+   "type": "热身",
+   "parts": [
+    "全身"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": false,
+   "goals": [
+    "减脂",
+    "灵活"
+   ],
+   "cue": "左右交替向侧迈步并举臂，不跳跃，落地轻",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "arm_swing_chest",
+   "name": "扩胸振臂",
+   "type": "热身",
+   "parts": [
+    "胸",
+    "肩"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "双臂平举向后轻振，不甩不耸肩",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "standing_side_bend",
+   "name": "站姿侧屈",
+   "type": "热身",
+   "parts": [
+    "核心",
+    "背"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "手臂上举向侧弯，髋部不左右晃",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "leg_swing",
+   "name": "扶墙腿部摆动",
+   "type": "热身",
+   "parts": [
+    "下肢",
+    "臀"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": true,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "扶墙前后摆腿，幅度由小到大；单侧动作，次数按每侧计",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "side_lying_leg_raise",
+   "name": "侧卧抬腿",
+   "type": "热身",
+   "parts": [
+    "臀"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": true,
+   "goals": [
+    "灵活",
+    "增肌"
+   ],
+   "cue": "身体侧卧成一条直线，抬腿不超过 45 度；单侧动作，次数按每侧计",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "jog_in_place",
+   "name": "原地慢跑",
+   "type": "热身",
+   "parts": [
+    "全身",
+    "下肢"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 60,
+   "unilateral": false,
+   "goals": [
+    "减脂",
+    "灵活"
+   ],
+   "cue": "小步轻跑，前脚掌轻落地；膝盖不适改为原地踏步",
+   "tags": [
+    "跳跃"
+   ],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "bodyweight_squat",
+   "name": "徒手深蹲",
+   "type": "力量",
+   "parts": [
+    "下肢",
+    "臀"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "减脂",
+    "增肌"
+   ],
+   "cue": "膝盖不要内扣，下蹲到大腿与地面平行即可",
+   "tags": [],
+   "substitute": null,
+   "v7": true
+  },
+  {
+   "id": "glute_bridge",
+   "name": "臀桥",
+   "type": "力量",
+   "parts": [
+    "臀"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌",
+    "核心"
+   ],
+   "cue": "顶髋时夹臀，不要用腰顶",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "calf_raise",
+   "name": "提踵",
+   "type": "力量",
+   "parts": [
+    "下肢"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "顶端停一秒，扶墙保持平衡",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "goblet_squat",
+   "name": "高脚杯深蹲",
+   "type": "力量",
+   "parts": [
+    "下肢",
+    "臀"
+   ],
+   "equipment": [
+    "哑铃"
+   ],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌",
+    "减脂"
+   ],
+   "cue": "哑铃贴胸，躯干保持直立，不要含腰",
+   "tags": [],
+   "substitute": "bodyweight_squat",
+   "v7": true
+  },
+  {
+   "id": "reverse_lunge",
+   "name": "后撤步箭步蹲",
+   "type": "力量",
+   "parts": [
+    "下肢",
+    "臀"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌",
+    "减脂"
+   ],
+   "cue": "左右交替计 1 次；前膝稳定不内扣",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "sumo_squat",
+   "name": "哑铃相扑深蹲",
+   "type": "力量",
+   "parts": [
+    "下肢",
+    "臀"
+   ],
+   "equipment": [
+    "哑铃"
+   ],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "脚尖外展，膝盖朝脚尖方向",
+   "tags": [],
+   "substitute": "bodyweight_squat",
+   "v7": false
+  },
+  {
+   "id": "db_romanian_deadlift",
+   "name": "哑铃罗马尼亚硬拉",
+   "type": "力量",
+   "parts": [
+    "臀",
+    "下肢",
+    "背"
+   ],
+   "equipment": [
+    "哑铃"
+   ],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "屈髋不弯腰，哑铃贴腿下放",
+   "tags": [],
+   "substitute": "glute_bridge",
+   "v7": false
+  },
+  {
+   "id": "single_leg_glute_bridge",
+   "name": "单腿臀桥",
+   "type": "力量",
+   "parts": [
+    "臀"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": true,
+   "goals": [
+    "增肌",
+    "核心"
+   ],
+   "cue": "骨盆保持水平，不要侧倾；单侧动作，次数按每侧计",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "bulgarian_split_squat",
+   "name": "保加利亚分腿蹲",
+   "type": "力量",
+   "parts": [
+    "下肢",
+    "臀"
+   ],
+   "equipment": [
+    "凳子"
+   ],
+   "difficulty": "中高",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": true,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "后脚搭凳不稳时扶墙，前膝不超过脚尖；单侧动作，次数按每侧计",
+   "tags": [],
+   "substitute": "reverse_lunge",
+   "v7": true
+  },
+  {
+   "id": "jump_squat",
+   "name": "深蹲跳",
+   "type": "力量",
+   "parts": [
+    "下肢",
+    "全身"
+   ],
+   "equipment": [],
+   "difficulty": "中高",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "减脂"
+   ],
+   "cue": "落地屈膝缓冲；膝关节不适者不做",
+   "tags": [
+    "跳跃"
+   ],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "knee_push_up",
+   "name": "跪姿俯卧撑",
+   "type": "力量",
+   "parts": [
+    "胸",
+    "手臂"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "膝关节着地，身体成一条直线，不要塌腰",
+   "tags": [],
+   "substitute": null,
+   "v7": true
+  },
+  {
+   "id": "push_up",
+   "name": "标准俯卧撑",
+   "type": "力量",
+   "parts": [
+    "胸",
+    "手臂",
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "增肌",
+    "减脂"
+   ],
+   "cue": "身体成一条直线，肘部约 45 度",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "db_bench_press",
+   "name": "哑铃卧推",
+   "type": "力量",
+   "parts": [
+    "胸",
+    "手臂"
+   ],
+   "equipment": [
+    "哑铃",
+    "凳子"
+   ],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "肩胛后收下沉，下放到胸侧，不要弹震",
+   "tags": [],
+   "substitute": "push_up",
+   "v7": true
+  },
+  {
+   "id": "parallel_bar_dip",
+   "name": "双杠臂屈伸",
+   "type": "力量",
+   "parts": [
+    "胸",
+    "手臂"
+   ],
+   "equipment": [
+    "双杠"
+   ],
+   "difficulty": "中高",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "身体前倾，下放到肩略低于肘，肩部不适立即停止",
+   "tags": [],
+   "substitute": "bench_dip",
+   "v7": true
+  },
+  {
+   "id": "band_row",
+   "name": "弹力带划船",
+   "type": "力量",
+   "parts": [
+    "背"
+   ],
+   "equipment": [
+    "弹力带"
+   ],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "先动肩胛再屈肘，不要耸肩",
+   "tags": [],
+   "substitute": "superman",
+   "v7": true
+  },
+  {
+   "id": "superman",
+   "name": "超人式",
+   "type": "力量",
+   "parts": [
+    "背",
+    "臀"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "核心"
+   ],
+   "cue": "抬起幅度小即可，颈部保持中立",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "band_pulldown",
+   "name": "弹力带下拉",
+   "type": "力量",
+   "parts": [
+    "背"
+   ],
+   "equipment": [
+    "弹力带"
+   ],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "弹力带固定高处，肘向下后方拉",
+   "tags": [],
+   "substitute": "superman",
+   "v7": false
+  },
+  {
+   "id": "bent_over_db_row",
+   "name": "俯身哑铃划船",
+   "type": "力量",
+   "parts": [
+    "背"
+   ],
+   "equipment": [
+    "哑铃"
+   ],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "屈髋俯身，背部平直，不要耸肩",
+   "tags": [],
+   "substitute": "superman",
+   "v7": false
+  },
+  {
+   "id": "one_arm_db_row",
+   "name": "单臂哑铃划船",
+   "type": "力量",
+   "parts": [
+    "背"
+   ],
+   "equipment": [
+    "哑铃",
+    "凳子"
+   ],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": true,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "脊柱保持中立，不要用腰部甩动；单侧动作，次数按每侧计",
+   "tags": [],
+   "substitute": "superman",
+   "v7": true
+  },
+  {
+   "id": "db_lateral_raise",
+   "name": "哑铃侧平举",
+   "type": "力量",
+   "parts": [
+    "肩"
+   ],
+   "equipment": [
+    "哑铃"
+   ],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "抬到与肩同高即可，不要耸肩借力",
+   "tags": [],
+   "substitute": "prone_ytw",
+   "v7": true
+  },
+  {
+   "id": "band_face_pull",
+   "name": "弹力带面拉",
+   "type": "力量",
+   "parts": [
+    "肩",
+    "背"
+   ],
+   "equipment": [
+    "弹力带"
+   ],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌",
+    "灵活"
+   ],
+   "cue": "拉向面部，外旋肩膀，肘高于手",
+   "tags": [],
+   "substitute": "prone_ytw",
+   "v7": false
+  },
+  {
+   "id": "db_shoulder_press",
+   "name": "哑铃推举",
+   "type": "力量",
+   "parts": [
+    "肩",
+    "手臂"
+   ],
+   "equipment": [
+    "哑铃"
+   ],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "核心收紧，不要过度挺腰",
+   "tags": [],
+   "substitute": "pike_push_up",
+   "v7": true
+  },
+  {
+   "id": "prone_ytw",
+   "name": "俯卧 YTW",
+   "type": "力量",
+   "parts": [
+    "肩",
+    "背"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 4,
+   "unilateral": false,
+   "goals": [
+    "增肌",
+    "灵活"
+   ],
+   "cue": "俯卧，手臂依次摆成 Y、T、W 抬起，拇指朝上，不耸肩",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "plank_shoulder_tap",
+   "name": "平板肩触",
+   "type": "力量",
+   "parts": [
+    "肩",
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "核心"
+   ],
+   "cue": "高位平板，交替手触对侧肩，骨盆不左右晃",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "pike_push_up",
+   "name": "派克俯卧撑",
+   "type": "力量",
+   "parts": [
+    "肩",
+    "手臂"
+   ],
+   "equipment": [],
+   "difficulty": "中高",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "头部下放到手前方，颈肩不适立即停止",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "db_curl",
+   "name": "哑铃弯举",
+   "type": "力量",
+   "parts": [
+    "手臂"
+   ],
+   "equipment": [
+    "哑铃"
+   ],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "大臂贴身，不要借身体摆动",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "overhead_db_extension",
+   "name": "哑铃颈后臂屈伸",
+   "type": "力量",
+   "parts": [
+    "手臂"
+   ],
+   "equipment": [
+    "哑铃"
+   ],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "大臂保持竖直，肘部不外展",
+   "tags": [],
+   "substitute": "diamond_push_up",
+   "v7": false
+  },
+  {
+   "id": "bench_dip",
+   "name": "凳上臂屈伸",
+   "type": "力量",
+   "parts": [
+    "手臂",
+    "胸"
+   ],
+   "equipment": [
+    "凳子"
+   ],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "背部贴近凳子，肩部不适立即停止",
+   "tags": [],
+   "substitute": "diamond_push_up",
+   "v7": false
+  },
+  {
+   "id": "diamond_push_up",
+   "name": "窄距俯卧撑",
+   "type": "力量",
+   "parts": [
+    "手臂",
+    "胸"
+   ],
+   "equipment": [],
+   "difficulty": "中高",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "双手在胸下靠拢，肘部贴身；做不了可改跪姿",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "plank",
+   "name": "平板支撑",
+   "type": "力量",
+   "parts": [
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": false,
+   "goals": [
+    "核心"
+   ],
+   "cue": "不要塌腰或撅臀，保持骨盆中立",
+   "tags": [],
+   "substitute": null,
+   "v7": true
+  },
+  {
+   "id": "bird_dog",
+   "name": "鸟狗式",
+   "type": "力量",
+   "parts": [
+    "核心",
+    "背"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 4,
+   "unilateral": false,
+   "goals": [
+    "核心"
+   ],
+   "cue": "对侧手脚同时伸展，骨盆不晃",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "crunch",
+   "name": "卷腹",
+   "type": "力量",
+   "parts": [
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "核心"
+   ],
+   "cue": "下背贴地，不要用手拉头",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "dead_bug",
+   "name": "死虫式",
+   "type": "力量",
+   "parts": [
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 4,
+   "unilateral": false,
+   "goals": [
+    "核心"
+   ],
+   "cue": "腰部始终贴地，动作放慢",
+   "tags": [],
+   "substitute": null,
+   "v7": true
+  },
+  {
+   "id": "side_plank",
+   "name": "侧平板支撑",
+   "type": "力量",
+   "parts": [
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": true,
+   "goals": [
+    "核心"
+   ],
+   "cue": "身体成一条直线；单侧动作，一组含左右两侧",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "lying_leg_raise",
+   "name": "仰卧抬腿",
+   "type": "力量",
+   "parts": [
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "核心"
+   ],
+   "cue": "腰部离地就减小幅度",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "russian_twist",
+   "name": "俄罗斯转体",
+   "type": "力量",
+   "parts": [
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "核心",
+    "减脂"
+   ],
+   "cue": "转动来自躯干，腰部不适时双脚着地",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "hollow_hold",
+   "name": "空心支撑",
+   "type": "力量",
+   "parts": [
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "中高",
+   "measure": "timed",
+   "seconds": 20,
+   "unilateral": false,
+   "goals": [
+    "核心"
+   ],
+   "cue": "下背必须贴地，贴不住就屈膝",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "jumping_jack",
+   "name": "开合跳",
+   "type": "有氧",
+   "parts": [
+    "全身"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": false,
+   "goals": [
+    "减脂"
+   ],
+   "cue": "前脚掌落地；膝盖不适改为无跳版",
+   "tags": [
+    "跳跃"
+   ],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "high_knees",
+   "name": "高抬腿",
+   "type": "有氧",
+   "parts": [
+    "全身",
+    "下肢"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": false,
+   "goals": [
+    "减脂"
+   ],
+   "cue": "保持躯干直立，落地轻",
+   "tags": [
+    "跳跃"
+   ],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "mountain_climber",
+   "name": "登山跑",
+   "type": "有氧",
+   "parts": [
+    "全身",
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": false,
+   "goals": [
+    "减脂",
+    "核心"
+   ],
+   "cue": "手在肩正下方，臀部不要抬高",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "jump_rope",
+   "name": "跳绳",
+   "type": "有氧",
+   "parts": [
+    "全身"
+   ],
+   "equipment": [
+    "跳绳"
+   ],
+   "difficulty": "中等",
+   "measure": "timed",
+   "seconds": 60,
+   "unilateral": false,
+   "goals": [
+    "减脂"
+   ],
+   "cue": "小幅跳起，前脚掌着地",
+   "tags": [
+    "跳跃"
+   ],
+   "substitute": "jumping_jack",
+   "v7": false
+  },
+  {
+   "id": "kettlebell_swing",
+   "name": "壶铃摆荡",
+   "type": "有氧",
+   "parts": [
+    "臀",
+    "全身"
+   ],
+   "equipment": [
+    "壶铃"
+   ],
+   "difficulty": "中高",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "减脂",
+    "增肌"
+   ],
+   "cue": "屈髋发力不是深蹲，腰部不适立即停止",
+   "tags": [],
+   "substitute": "jump_squat",
+   "v7": false
+  },
+  {
+   "id": "burpee",
+   "name": "波比跳",
+   "type": "有氧",
+   "parts": [
+    "全身"
+   ],
+   "equipment": [],
+   "difficulty": "中高",
+   "measure": "reps",
+   "seconds": 4,
+   "unilateral": false,
+   "goals": [
+    "减脂"
+   ],
+   "cue": "新手可去掉跳跃与俯卧撑；腰膝不适不做",
+   "tags": [
+    "跳跃"
+   ],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "quad_stretch",
+   "name": "站姿股四头肌拉伸",
+   "type": "拉伸",
+   "parts": [
+    "下肢"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": true,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "扶墙保持平衡；单侧动作，一组含左右两侧",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "hamstring_stretch",
+   "name": "坐姿体前屈",
+   "type": "拉伸",
+   "parts": [
+    "下肢",
+    "背"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": false,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "从髋部前倾，不要弹震",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "hip_flexor_stretch",
+   "name": "跪姿髋屈肌拉伸",
+   "type": "拉伸",
+   "parts": [
+    "下肢"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": true,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "骨盆微后倾；单侧动作，一组含左右两侧",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "chest_doorway_stretch",
+   "name": "门框胸部拉伸",
+   "type": "拉伸",
+   "parts": [
+    "胸",
+    "肩"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": false,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "前臂贴门框，身体缓慢前倾",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "cross_body_shoulder_stretch",
+   "name": "交叉肩部拉伸",
+   "type": "拉伸",
+   "parts": [
+    "肩"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": true,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "不要耸肩；单侧动作，一组含左右两侧",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "childs_pose",
+   "name": "婴儿式",
+   "type": "拉伸",
+   "parts": [
+    "背",
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 45,
+   "unilateral": false,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "臀部坐向脚跟，自然呼吸",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "knees_to_chest",
+   "name": "仰卧抱膝",
+   "type": "拉伸",
+   "parts": [
+    "背",
+    "臀"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": false,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "双手抱膝贴近胸口，下背放松贴地",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "butterfly_stretch",
+   "name": "蝴蝶式",
+   "type": "拉伸",
+   "parts": [
+    "下肢"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": false,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "坐姿脚掌相对，背挺直，膝盖自然下沉不用手压",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "supine_twist",
+   "name": "仰卧扭转",
+   "type": "拉伸",
+   "parts": [
+    "背",
+    "核心"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": true,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "双肩贴地，膝盖倒向一侧；单侧动作，一组含左右两侧",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "calf_stretch",
+   "name": "站姿小腿拉伸",
+   "type": "拉伸",
+   "parts": [
+    "下肢"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": true,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "扶墙弓步，后脚跟不离地；单侧动作，一组含左右两侧",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "overhead_triceps_stretch",
+   "name": "头后手臂拉伸",
+   "type": "拉伸",
+   "parts": [
+    "手臂",
+    "肩"
+   ],
+   "equipment": [],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": true,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "一手从头后拉住另一侧手肘，不低头；单侧动作，一组含左右两侧",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "pigeon_pose",
+   "name": "鸽子式",
+   "type": "拉伸",
+   "parts": [
+    "臀",
+    "下肢"
+   ],
+   "equipment": [],
+   "difficulty": "中等",
+   "measure": "timed",
+   "seconds": 30,
+   "unilateral": true,
+   "goals": [
+    "灵活"
+   ],
+   "cue": "前腿屈膝横放，髋部摆正；膝盖不适不做；单侧动作，一组含左右两侧",
+   "tags": [],
+   "substitute": null,
+   "v7": false
+  },
+  {
+   "id": "lat_pulldown",
+   "name": "高位下拉",
+   "type": "力量",
+   "parts": [
+    "背",
+    "手臂"
+   ],
+   "equipment": [
+    "高位下拉器"
+   ],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "拉到锁骨附近，不要后仰借力",
+   "tags": [],
+   "substitute": "band_pulldown",
+   "v7": false
+  },
+  {
+   "id": "seated_cable_row",
+   "name": "坐姿绳索划船",
+   "type": "力量",
+   "parts": [
+    "背"
+   ],
+   "equipment": [
+    "绳索器械"
+   ],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "挺胸，先收肩胛再拉",
+   "tags": [],
+   "substitute": "band_row",
+   "v7": false
+  },
+  {
+   "id": "leg_press",
+   "name": "腿举",
+   "type": "力量",
+   "parts": [
+    "下肢",
+    "臀"
+   ],
+   "equipment": [
+    "腿举机"
+   ],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "下放时下背不离开靠垫，膝盖不锁死",
+   "tags": [],
+   "substitute": "bodyweight_squat",
+   "v7": false
+  },
+  {
+   "id": "leg_extension",
+   "name": "腿屈伸",
+   "type": "力量",
+   "parts": [
+    "下肢"
+   ],
+   "equipment": [
+    "腿屈伸机"
+   ],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "调好轴心对准膝关节，膝部不适减重",
+   "tags": [],
+   "substitute": "bodyweight_squat",
+   "v7": false
+  },
+  {
+   "id": "seated_leg_curl",
+   "name": "坐姿腿弯举",
+   "type": "力量",
+   "parts": [
+    "下肢"
+   ],
+   "equipment": [
+    "腿弯举机"
+   ],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "动作放慢，不要甩",
+   "tags": [],
+   "substitute": "glute_bridge",
+   "v7": false
+  },
+  {
+   "id": "cable_triceps_pushdown",
+   "name": "绳索下压",
+   "type": "力量",
+   "parts": [
+    "手臂"
+   ],
+   "equipment": [
+    "绳索器械"
+   ],
+   "difficulty": "简单",
+   "measure": "reps",
+   "seconds": 2,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "大臂贴身不动",
+   "tags": [],
+   "substitute": "overhead_db_extension",
+   "v7": false
+  },
+  {
+   "id": "treadmill_jog",
+   "name": "跑步机慢跑",
+   "type": "有氧",
+   "parts": [
+    "全身",
+    "下肢"
+   ],
+   "equipment": [
+    "跑步机"
+   ],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 300,
+   "unilateral": false,
+   "goals": [
+    "减脂"
+   ],
+   "cue": "新手先快走，扶手只用于平衡",
+   "tags": [],
+   "substitute": "march_in_place",
+   "v7": false
+  },
+  {
+   "id": "stationary_bike",
+   "name": "固定单车",
+   "type": "有氧",
+   "parts": [
+    "下肢",
+    "全身"
+   ],
+   "equipment": [
+    "固定单车"
+   ],
+   "difficulty": "简单",
+   "measure": "timed",
+   "seconds": 300,
+   "unilateral": false,
+   "goals": [
+    "减脂"
+   ],
+   "cue": "座椅高度到踩下时膝盖微屈",
+   "tags": [],
+   "substitute": "march_in_place",
+   "v7": false
+  },
+  {
+   "id": "cable_fly",
+   "name": "绳索夹胸",
+   "type": "力量",
+   "parts": [
+    "胸"
+   ],
+   "equipment": [
+    "绳索器械"
+   ],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "肘部微屈固定，不要耸肩",
+   "tags": [],
+   "substitute": "push_up",
+   "v7": false
+  },
+  {
+   "id": "assisted_pull_up",
+   "name": "辅助引体向上",
+   "type": "力量",
+   "parts": [
+    "背",
+    "手臂"
+   ],
+   "equipment": [
+    "辅助引体器"
+   ],
+   "difficulty": "中等",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "配重辅助，下放到手臂接近伸直",
+   "tags": [],
+   "substitute": "band_pulldown",
+   "v7": false
+  },
+  {
+   "id": "rowing_machine",
+   "name": "划船机",
+   "type": "有氧",
+   "parts": [
+    "全身",
+    "背"
+   ],
+   "equipment": [
+    "划船机"
+   ],
+   "difficulty": "中等",
+   "measure": "timed",
+   "seconds": 300,
+   "unilateral": false,
+   "goals": [
+    "减脂"
+   ],
+   "cue": "先蹬腿再拉手，背部不要弓",
+   "tags": [],
+   "substitute": "jumping_jack",
+   "v7": false
+  },
+  {
+   "id": "barbell_back_squat",
+   "name": "杠铃深蹲",
+   "type": "力量",
+   "parts": [
+    "下肢",
+    "臀"
+   ],
+   "equipment": [
+    "杠铃"
+   ],
+   "difficulty": "中高",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "在深蹲架内做并设保护杠；腰膝不适不做",
+   "tags": [],
+   "substitute": "goblet_squat",
+   "v7": false
+  },
+  {
+   "id": "barbell_bench_press",
+   "name": "杠铃卧推",
+   "type": "力量",
+   "parts": [
+    "胸",
+    "手臂"
+   ],
+   "equipment": [
+    "杠铃",
+    "卧推凳架"
+   ],
+   "difficulty": "中高",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "必须有保护或安全杠，不要弹胸",
+   "tags": [],
+   "substitute": "db_bench_press",
+   "v7": false
+  },
+  {
+   "id": "barbell_rdl",
+   "name": "杠铃罗马尼亚硬拉",
+   "type": "力量",
+   "parts": [
+    "臀",
+    "下肢",
+    "背"
+   ],
+   "equipment": [
+    "杠铃"
+   ],
+   "difficulty": "中高",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "屈髋不弯腰，杠铃贴腿",
+   "tags": [],
+   "substitute": "db_romanian_deadlift",
+   "v7": false
+  },
+  {
+   "id": "barbell_row",
+   "name": "杠铃划船",
+   "type": "力量",
+   "parts": [
+    "背"
+   ],
+   "equipment": [
+    "杠铃"
+   ],
+   "difficulty": "中高",
+   "measure": "reps",
+   "seconds": 3,
+   "unilateral": false,
+   "goals": [
+    "增肌"
+   ],
+   "cue": "背部平直，重量以不借腰为准",
+   "tags": [],
+   "substitute": "bent_over_db_row",
+   "v7": false
+  }
+ ],
+ "aliases": {
+  "俯卧撑": "push_up",
+  "深蹲": "bodyweight_squat",
+  "平板": "plank",
+  "箭步蹲": "reverse_lunge",
+  "弓步蹲": "reverse_lunge",
+  "波比": "burpee",
+  "登山者": "mountain_climber",
+  "手臂环绕": "arm_circles",
+  "侧平举": "db_lateral_raise",
+  "弯举": "db_curl"
+ }
+}
