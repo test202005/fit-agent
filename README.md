@@ -86,10 +86,14 @@ curl -X POST localhost:5001/api/chat -H 'Content-Type: application/json' \
      -d '{"text":"今天卧推60kg做了4组每组8次","user_id":"demo-user","request_id":"req-001"}'
 curl -X POST localhost:5001/api/chat -H 'Content-Type: application/json' \
      -d '{"text":"今天练了什么"}'
+curl -X POST localhost:5001/api/assistant -H 'Content-Type: application/json' \
+     -d '{"text":"中午做了100个俯卧撑，顺便把腿日挪到最前面"}'   # 统一入口
 curl localhost:5001/health
 ```
 
-数据落在 `data/records.sqlite3`（SQLite，自动创建）。`/api/chat` 覆盖意图路由、记录写入和查询；训练计划生成目前只通过 `eval/run_plan_eval.py` 运行，没有 HTTP 入口。
+数据落在 `data/records.sqlite3`（SQLite，自动创建）。`/api/assistant` 是统一入口（V9），一个助手持有记录、查询、统计、训练安排、训练计划全部工具；`/api/chat` 是原固定链路，覆盖意图路由、记录写入和查询，保留作对照组；训练计划生成目前只通过 `eval/run_plan_eval.py` 运行，没有 HTTP 入口。
+
+服务启动后，浏览器打开 `http://localhost:5001/console` 是本地调试台：左边聊天、中间「我的面板」是用户视角（只显示用户看得到的内容），点回复下方的 trace 链接在右侧打开评测视角（完整链路、逐次工具调用、操作前后状态）。页面只有「智能助手」一个入口（同 `/api/assistant`）；「全部链路」页可搜索包括评测 Runner 在内的所有 Trace。调试台只调真实模型，会消耗 token；仅供本机使用，不改变 `/api/chat` 的行为。
 
 ### 6. 结果去哪看
 
@@ -190,11 +194,17 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
 
 ## 当前范围
 
+现在能用它做什么、每项能力的示例输入和边界，见 **[当前能力清单](docs/当前能力清单.md)**。下面是主链路结构：
+
 ```
 一句话 → 意图路由 → ┬─ record → 字段抽取 → 三态判定 → 受控写入
                     └─ query  → 查询计划 → 执行 → 结果
 
-训练计划（离线评测入口）：需求解析 planner → 动作库 tool → 计划 generator（固定三步编排）
+训练计划：需求解析 planner → 动作库 tool → 计划 generator（固定三步编排）
+训练计划 v2（V10，统一助手默认）：需求解析 → 代码筛候选 → 模型编排 → 代码校验红线与数据、核算时长
+工具调用：模型自选 create_record / query_records / count_exercise，单轮最多 3 个
+训练安排：get_routine → set_routine_order，工具错误回灌、最多 5 轮
+（后三条不走 /api/chat，由评测 Runner 或本地调试台 /console 调用）
 ```
 
 这是**带完整评测闭环的多节点 LLM workflow**，不是自主 Agent，也不是 ReAct--不做概念包装。多轮对话、上下文记忆等未实现能力与后续计划见 [ROADMAP](ROADMAP.md)。
@@ -209,7 +219,9 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
 
 ## 文档
 
+- [Agent 评测能力与项目实践总纲](docs/Agent能力与评测全景.md)：传统测试迁移、能力树、需求到评测、Pipeline、统计与项目练习
 - [评测总入口](eval/README.md)：先读这个，再选数据集、Runner 或报告
+- [当前能力清单](docs/当前能力清单.md)：现在能做什么、示例输入、边界
 - [产品总览](docs/product-overview.md) · [总体计划](docs/master-plan.md) · [Phase 1 需求](docs/prd.md)
 - 各迭代 PRD：[意图识别](docs/prd-iter1-intent.md) · [抽取写入](docs/prd-iter2-extract.md) · [查询](docs/prd-iter3-query.md) · [Tool Use](docs/prd-iter4-tooluse.md) · [SQLite 持久化](docs/prd-v6-persistence.md)
 - [代码实现讲解](docs/迭代一代码实现讲解.md)：每个文件为什么这么写

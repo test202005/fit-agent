@@ -12,7 +12,7 @@
 
 ## 当前阶段
 
-**V7.0 已实现固定多步训练计划生成与可观测性，尚非自主 ReAct；V5.0 稳定性与成本口径、V5.1 两模型受控对比、V6 SQLite 持久化均已关账。**
+**V7.0 已实现固定多步训练计划生成与可观测性，尚非自主 ReAct；V5.0 稳定性与成本口径、V5.1 两模型受控对比、V6 SQLite 持久化均已验收。**
 
 权威事实源是 [当前进度.md](当前进度.md)——本节只给稳定坐标，具体进度以那份为准，两边冲突时以 `当前进度.md` 为准。
 
@@ -22,8 +22,12 @@
 |---|---|
 | 恢复工作 | [当前进度.md](当前进度.md) |
 | 人机协作参考 | [Agentic Coding 协作指南](docs/Agentic-Coding协作指南.md) |
+| 设计基调 | [docs/AI-Native设计基调.md](docs/AI-Native设计基调.md)：AI Native 四层划分、已做与遗留、探索记录 |
+| 产品介绍（用户视角） | [docs/产品介绍.md](docs/产品介绍.md)：为什么用、解决哪些痛点、怎么用、不做什么 |
+| 当前能力 | [docs/当前能力清单.md](docs/当前能力清单.md)：现在能做什么、示例、边界 |
 | 评测总入口 | [eval/README.md](eval/README.md) |
-| 迭代规划依据 | [docs/Agent能力与评测全景.md](docs/Agent能力与评测全景.md) |
+| 本地调试台 | `python -m backend.app` 后打开 `localhost:5001/console`：用户视角（聊天＋面板）与评测视角（Trace）对照；实现在 `backend/console.py`、`backend/static/` |
+| 学习与评测实践总纲 | [docs/Agent能力与评测全景.md](docs/Agent能力与评测全景.md)，含原开发练手路线；产品范围仍以 master-plan 和专项 PRD 为准 |
 | 问题细账 | [eval/reports/问题清单.md](eval/reports/问题清单.md) |
 | 版本主线 | [eval/reports/版本演进与问题复盘.md](eval/reports/版本演进与问题复盘.md) |
 | 内容系列总纲 | [content/系列大纲.md](content/系列大纲.md) |
@@ -31,6 +35,12 @@
 SDK 使用 OpenAI Python SDK 兼容 DeepSeek API，模型默认 `deepseek-v4-flash`（另有 `deepseek-v4-pro` 可用于多模型对比）。总纲见 [docs/master-plan.md](docs/master-plan.md)（v4），Phase 1 总需求见 [docs/prd.md](docs/prd.md)（v2）。
 
 流程约定：每迭代先写专项 PRD → 主人评审 → 过门禁 → 动码 → 过退出门禁才进下一迭代。iter-1 动码时先 `git init` + `.gitignore`（logs/、数据文件）。
+
+PRD 迭代格式（2026-09-25 起，新 PRD 必须遵守；旧 PRD 不补写无法考证的历史）：
+
+- 顶部「版本记录」表：版本、日期（北京时间）、变更内容、原因、确认人；实质修改追加一行，不覆盖旧行
+- 正文按子迭代拆分，每个子迭代写目标、范围、验收标准和状态（未开始／进行中／已实现待验证／已验收）；状态变化同步 ROADMAP
+- 开头必须回答两把尺子（2026-09-25 起）：**用户价值**（解决 [产品介绍](docs/产品介绍.md) 里哪个痛点，对不上即范围蔓延）；**AI Native 分层**（哪些是红线、数据、指引，哪些放给模型，写死的部分说明理由）。拿不准先与主人讨论，需要依据时查一手资料
 
 ### 连续执行授权
 
@@ -60,12 +70,14 @@ fit-agent/
 
 ## 纪律
 
+- **AI Native 优先（设计基调，探索中）**：默认由模型决定做什么、怎么做；代码只守红线和数据正确；写死分支、流程或模板须说明理由（安全、事实正确、成本）。评测看不变量与边界，不看是否与模板一致。详见 [AI Native 设计基调](docs/AI-Native设计基调.md)，新认识追加到其第 5 节
 - **trace-first**：任何新链路代码从第一行起就带 traceId 结构化日志，不允许 print 调试
 - **范围红线**：范围蔓延是本项目头号风险。master-plan 的「非目标」清单里的东西不做；每个 Phase 验收标准中测试产出是硬指标，功能"够测"即停
 - **LLM 可替换**：所有 LLM 调用走统一入口，支持 stub 注入，保证回归不花 token
 - 密钥走环境变量 `DEEPSEEK_API_KEY`，不进代码不进 commit
 - **Prompt 版本证据**：`backend/prompts/manifest.json` 是当前 Prompt 入口；新增版本时保留旧文件并更新 manifest，不原地覆盖旧版本；每次 Prompt 修改必须单独 commit；Trace 与正式评测报告同时记录 prompt name、version、hash 和 Git commit
 - **locked 使用规则**：调优期间只运行 discovery / regression；locked 仅在候选版本冻结后一次性运行 3 轮。已暴露的 locked Case 转入 regression，补位 Case 由未参与当前 Prompt 调优的人盲写
+- **能力清单同步**：新增、删除能力或改变能力边界（含入口、支持的输入、限制）后，同一次改动内更新 [docs/当前能力清单.md](docs/当前能力清单.md) 与其「更新」日期；只写代码实际行为，不写计划
 - **契约文档变更管控**：PRD、架构和契约类文档的实质修改必须先经主人确认，再单独 commit 并说明变更原因。执行中发现文档与现实冲突时，AI 只能先在进度或 Review 文档提出变更申请，不得直接改写契约
 
 ## 技术栈
@@ -95,7 +107,10 @@ P-007 已修：五套 Runner 退出码统一为四态契约——只有 `PASS / 
 .venv/bin/python eval/run_query_eval.py   --views all --run-mode stub --runs 2
 .venv/bin/python eval/run_tool_eval.py    --views all --run-mode stub --runs 2
 .venv/bin/python eval/run_plan_eval.py    --views all --run-mode stub
+.venv/bin/python eval/run_routine_eval.py --views all --run-mode stub --runs 2
 ```
+
+训练计划 v2 三组对照只有 Live（会花 token），编排逻辑由 `tests/test_plan_v2_unit.py` 覆盖：`.venv/bin/python eval/run_plan_v2_eval.py --arms v7,llm_only,v2`。动作库内容源是 `docs/动作库-v2-草稿.md`，改后运行 `.venv/bin/python -m tests.action_draft_parser` 重新生成数据文件。
 
 架构对比（真实模型，会花 token）：
 
