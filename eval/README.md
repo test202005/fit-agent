@@ -154,6 +154,7 @@ Live 模式从项目根目录 `.env` 读取 `DEEPSEEK_API_KEY` 和可选的 `DEE
 | `run_query_eval.py` | 查询计划、执行结果、时间边界和零写入 |
 | `run_tool_eval.py` | 工具选择、参数、调用次数、副作用和首个分歧步骤 |
 | `run_plan_eval.py` | 工具入参是否符合意图、计划是否只来自观察、Trace 契约 |
+| `run_regression.py` | 零 token 一键回归：单测加六套 stub 评测，输出汇总表；结果对照 [零 token 回归基线](reports/零token回归基线.md) |
 | `run_routine_eval.py` | 训练安排调整顺序：分层判定首次协议、首次顺序、写尝试次数与最终状态；「首次被拒、重试成功」记 REVIEW 单列，见 [V8 PRD](../docs/prd-v8-routine-reorder.md) |
 | `run_plan_v2_eval.py` | 训练计划 V10 三组对照（v7 / llm_only / v2）：以 Case truth 判红线 R1–R6 与数据 D1–D4（FAIL），指引 G1、G2、G5（REVIEW）；只支持 Live，编排逻辑由 `tests/test_plan_v2_unit.py` 用 Stub 覆盖。见 [V10 PRD](../docs/prd-v10-plan-generation-v2.md) |
 
