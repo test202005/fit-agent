@@ -182,3 +182,16 @@ def test_tool_eval_trace_id_is_unique_per_trial():
     assert first.startswith("t-tl-001-")
     assert second.startswith("t-tl-001-")
     assert first != second
+
+
+def test_query_records_only_exposes_training_fields_to_model():
+    from backend.tools import QUERY_RESULT_FIELDS
+    storage = FakeStorage()
+    storage.append([{"exercise": "深蹲", "weight_kg": None, "sets": None, "reps": 20,
+                     "duration_min": None, "distance_km": None, "state": "complete"}],
+                   "t-seed", FrozenClock("2026-09-03T20:00:00+08:00").now(), "u", "req-1")
+    executors = make_executors(storage, FrozenClock("2026-09-03T20:00:00+08:00"), "t-1", "u")
+    record = executors["query_records"]({"date": "2026-09-03"})["records"][0]
+    assert set(record) == set(QUERY_RESULT_FIELDS)
+    assert record["exercise"] == "深蹲" and record["reps"] == 20
+    assert not {"id", "user_id", "request_id", "trace_id", "created_at"} & set(record)

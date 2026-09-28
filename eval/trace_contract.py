@@ -29,6 +29,16 @@ CONTRACTS: dict[str, list[dict[str, Any]]] = {
         {"node": "generator", "event": "generate_response", "require": ["raw_text", "duration_ms"]},
         {"node": "generator", "event": "parse_result", "require": ["ok"]},
     ],
+    # 训练安排：多轮循环，轮数不固定；契约只声明首尾与至少一轮模型调用，逐次工具尝试由 Runner 分层判定
+    "routine_reorder": [
+        {"node": "routine", "event": "request", "require": ["text"]},
+        {"node": "routine", "event": "routine_request",
+         "require": ["model", "prompt_name", "prompt_version", "prompt_hash"]},
+        {"node": "state", "event": "state_before", "require": ["units"]},
+        {"node": "llm", "event": "llm_round", "require": ["round", "duration_ms"]},
+        {"node": "state", "event": "state_after", "require": ["units"]},
+        {"node": "routine", "event": "result", "require": ["ok"]},
+    ],
 }
 
 

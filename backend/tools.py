@@ -8,6 +8,9 @@ from backend.query import execute_plan
 from backend.storage import RECORD_FIELDS, StorageClient
 
 
+QUERY_RESULT_FIELDS = ("ts", *RECORD_FIELDS, "state")
+
+
 class ToolError(Exception):
     """工具执行失败。与模型自身的选择错误分开，便于归因。"""
 
@@ -134,7 +137,9 @@ def make_executors(
             raise ToolError("query_records takes only date")
         plan = {"type": "list_by_date", "date": _require_date(args.get("date"), "date")}
         outcome = execute_plan(plan, storage, user_id=user_id)
-        return {"count": outcome["count"], "records": outcome["records"]}
+        # 只给模型训练内容、时间与状态；内部 id、user_id、request_id、trace_id 不需要也不该进上下文
+        records = [{field: row.get(field) for field in QUERY_RESULT_FIELDS} for row in outcome["records"]]
+        return {"count": outcome["count"], "records": records}
 
     def count_exercise(args: dict[str, Any]) -> dict[str, Any]:
         if set(args) != {"exercise", "from", "to"}:

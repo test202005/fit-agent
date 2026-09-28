@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fit-agent 调试台</title>
+<link rel="stylesheet" href="/console/static/trace.css">
+<style>
+body { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: var(--card); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.topbar h1 { font-size: 16px; margin: 0 8px 0 0; }
+.tabs { display: flex; gap: 4px; }
+.tab { border: 0; background: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--muted); }
+.tab.on { background: var(--blue-bg); color: var(--blue); font-weight: 500; }
+.ctrl { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+.ctrl input, .ctrl select { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+.view { flex: 1; min-height: 0; display: none; }
+.view.on { display: grid; }
+#console { grid-template-columns: minmax(360px, 1fr) 300px; }
+#console.with-trace { grid-template-columns: minmax(320px, 0.9fr) 260px minmax(600px, 1.6fr); }
+.trace-body th:nth-child(4) { width: 130px !important; }
+.trace-body th:nth-child(3) { width: 56px !important; }
+.col { min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+.col-title { padding: 12px 20px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--card); display: flex; justify-content: space-between; align-items: center; }
+.col-title b { color: var(--text); font-size: 14px; }
+.chat-log { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.msg { max-width: 85%; }
+.msg.user { align-self: flex-end; }
+.bubble { padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; word-break: break-word; }
+.user .bubble { background: var(--blue); color: #fff; border-bottom-right-radius: 4px; }
+.bot .bubble { background: var(--card); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.bot.err .bubble { border-color: #f5c2c2; background: #fff8f8; }
+.msg-meta { font-size: 12px; color: var(--muted); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.trace-link { color: var(--blue); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.composer { border-top: 1px solid var(--line); background: var(--card); padding: 12px 16px; }
+.examples { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.ex { border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 2px 10px; font-size: 12px; cursor: pointer; color: var(--muted); }
+.ex:hover { color: var(--blue); border-color: var(--blue); }
+.inputrow { display: flex; gap: 8px; }
+.inputrow textarea { flex: 1; resize: none; height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+.btn { border: 0; background: var(--blue); color: #fff; border-radius: 8px; padding: 0 18px; cursor: pointer; font-size: 14px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.ghost { background: #fff; color: var(--blue); border: 1px solid var(--blue); padding: 4px 10px; font-size: 12px; }
+.panel-body { flex: 1; overflow-y: auto; padding: 16px; background: #fafbfc; }
+.pcard { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+.pcard h3 { margin: 0 0 10px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+.plist { list-style: none; margin: 0; padding: 0; }
+.plist li { display: flex; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.plist li:first-child { border-top: 0; }
+.idx { width: 20px; height: 20px; border-radius: 50%; background: var(--blue-bg); color: var(--blue); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.ts { color: var(--muted); font-size: 12px; flex: none; }
+.hint { color: var(--muted); font-size: 12px; }
+.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { from { background: var(--amber-bg); } to { background: var(--card); } }
+.col[hidden] { display: none; }
+.trace-col { background: var(--bg); }
+.trace-body { flex: 1; overflow-y: auto; padding: 16px; }
+.x { border: 0; background: none; font-size: 18px; cursor: pointer; color: var(--muted); }
+#traces { grid-template-columns: 320px 1fr; }
+#traces .list { overflow-y: auto; }
+#traces .detail-pane { overflow-y: auto; padding: 20px 24px 60px; }
+.search { padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--card); display: grid; gap: 8px; }
+.search input, .search select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+@media (max-width: 900px) {
+  body { height: auto; overflow: auto; }
+  #console, #console.with-trace, #traces { grid-template-columns: 1fr; }
+  .chat-log { max-height: 60vh; }
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>fit-agent 调试台</h1>
+  <div class="tabs">
+    <button class="tab on" data-view="console">调试台</button>
+    <button class="tab" data-view="traces">全部链路</button>
+  </div>
+  <div class="ctrl">用户 <input id="user" value="demo-user" size="12"></div>
+</div>
+
+<div class="view on" id="console">
+  <div class="col">
+    <div class="col-title"><span><b>聊天</b> · 用户视角：只看得到输入和回复</span></div>
+    <div class="chat-log" id="log"><div id="caps"></div></div>
+    <div class="composer">
+      <div class="examples" id="examples"></div>
+      <div class="inputrow">
+        <textarea id="text" placeholder="输入一句话，Enter 发送，Shift+Enter 换行"></textarea>
+        <button class="btn" id="send">发送</button>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="col-title"><span><b>我的面板</b> · 用户看到的效果</span></div>
+    <div class="panel-body">
+      <div class="pcard" id="routine-card">
+        <h3>训练安排 <button class="btn ghost" id="reset">重置</button></h3>
+        <div id="routine"></div>
+      </div>
+      <div class="pcard" id="records-card">
+        <h3>最近训练记录</h3>
+        <div id="records"></div>
+      </div>
+      <div class="hint">面板只显示用户能看到的内容：暂停的训练单元不出现。完整状态在评测视角里看。</div>
+    </div>
+  </div>
+  <div class="col trace-col" id="trace-col" hidden>
+    <div class="col-title"><span><b>评测视角</b> · <span id="trace-id"></span></span><button class="x" id="close" title="关闭">×</button></div>
+    <div class="trace-body" id="trace"></div>
+  </div>
+</div>
+
+<div class="view" id="traces">
+  <div class="col" style="background:var(--card)">
+    <div class="search"><input id="q" placeholder="搜索输入、case_id 或 trace_id"><select id="tchain"></select></div>
+    <div class="list" id="tlist"></div>
+  </div>
+  <div class="detail-pane" id="tdetail"><div class="empty">左侧选择一条链路</div></div>
+</div>
+
+<script src="/console/static/trace_render.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const CHAIN = 'assistant';  // 页面只有一个入口：智能助手
+let EXAMPLES = [];
+let CHAINS = {};
+let ALL = [];
+
+async function api(path, body) {
+  const res = await fetch(path, body === undefined ? {} : {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return res.json();
+}
+
+// 回复里常见的 **加粗**：模型按 Markdown 习惯输出，真实前端会渲染，这里只处理加粗
+function md(text) { return esc(text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); }
+
+function user() { return $('user').value.trim() || 'demo-user'; }
+
+async function init() {
+  const data = await api('/console/api/chains');
+  data.chains.forEach(c => CHAINS[c.id] = c.label);
+  const caps = (await api('/console/api/capabilities')).capabilities;
+  caps.forEach(c => c.examples.forEach(t => EXAMPLES.push([c.chain, t])));
+  $('caps').innerHTML = `<div class="pcard"><h3>现在能做什么 <span class="hint">来自 docs/当前能力清单.md，点示例直接填入</span></h3>
+    <ul class="plist">${caps.map(c => `<li style="align-items:flex-start">
+    <span><b>${esc(c.name)}</b>：${esc(c.result)}<br>${c.examples.map(t => `<button class="ex" data-t="${esc(t)}" data-c="${c.chain}">${esc(t)}</button>`).join(' ')}</span></li>`).join('')}</ul>
+    <div class="hint" style="margin-top:8px">回复下方的 trace 链接可以打开评测视角。</div></div>`;
+  $('examples').innerHTML = EXAMPLES.slice(0, 6).map(([c, t]) => `<button class="ex" data-t="${esc(t)}" data-c="${c}">${esc(t)}</button>`).join('');
+  document.querySelectorAll('.ex').forEach(b => b.onclick = () => {
+    $('text').value = b.dataset.t; $('text').focus();
+  });
+  loadPanel();
+}
+
+// ---------- 用户视角 ----------
+
+function addMsg(role, html, cls = '') {
+  const el = document.createElement('div');
+  el.className = `msg ${role} ${cls}`;
+  el.innerHTML = html;
+  $('log').appendChild(el);
+  $('log').scrollTop = $('log').scrollHeight;
+  return el;
+}
+
+async function send() {
+  const text = $('text').value.trim();
+  if (!text) return;
+  const chain = CHAIN;
+  $('text').value = '';
+  $('send').disabled = true;
+  addMsg('user', `<div class="bubble">${esc(text)}</div>`);
+  const pending = addMsg('bot', '<div class="bubble hint">处理中…</div>');
+  const started = performance.now();
+  try {
+    const r = await api('/console/api/run', { chain, text, user_id: user() });
+    const secs = ((performance.now() - started) / 1000).toFixed(1);
+    pending.className = `msg bot ${r.ok ? '' : 'err'}`;
+    const meta = [`${secs} s`];
+    if (r.summary && r.summary.tokens) meta.push(`${r.summary.tokens} token`);
+    if (r.trace_id) meta.push(`<span class="trace-link" data-t="${esc(r.trace_id)}">trace ${esc(r.trace_id.slice(0, 12))}… ↗</span>`);
+    pending.innerHTML = `<div class="bubble">${md(r.reply || r.message || r.error_code || '出错了')}</div><div class="msg-meta">${meta.join(' · ')}</div>`;
+    pending.querySelectorAll('.trace-link').forEach(a => a.onclick = () => openTrace(a.dataset.t));
+  } catch (e) {
+    pending.className = 'msg bot err';
+    pending.innerHTML = `<div class="bubble">请求失败：${esc(e.message)}</div>`;
+  }
+  $('send').disabled = false;
+  loadPanel(true);
+}
+
+async function loadPanel(flash) {
+  const p = await api(`/console/api/panel?user_id=${encodeURIComponent(user())}`);
+  $('routine').innerHTML = !p.routine_initialized
+    ? '<div class="hint">还没有训练安排，点「重置」初始化一份示例安排。</div>'
+    : `<ul class="plist">${p.routine.map((u, i) => `<li><span class="idx">${i + 1}</span>${esc(u.name)}</li>`).join('')}</ul>`;
+  $('reset').textContent = p.routine_initialized ? '重置' : '初始化';
+  $('records').innerHTML = p.records.length
+    ? `<ul class="plist">${p.records.map(r => `<li><span class="ts">${esc(localTime(r.ts))}</span>${esc(r.text)}</li>`).join('')}</ul>`
+    : '<div class="hint">暂无记录。试试在「自动路由」下说「今天卧推60公斤5组每组8个」。</div>';
+  if (flash) ['routine-card', 'records-card'].forEach(id => { const el = $(id); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); });
+}
+
+// ---------- 评测视角 ----------
+
+async function openTrace(id) {
+  $('console').classList.add('with-trace');
+  $('trace-col').hidden = false;
+  $('trace-id').textContent = id;
+  $('trace').innerHTML = '<div class="empty">加载中…</div>';
+  const t = await api(`/console/api/traces/${encodeURIComponent(id)}`);
+  if (!t.events) { $('trace').innerHTML = '<div class="empty">没有找到这条链路</div>'; return; }
+  renderTrace($('trace'), t);
+  $('trace').scrollTop = 0;
+}
+
+$('close').onclick = () => { $('trace-col').hidden = true; $('console').classList.remove('with-trace'); };
+
+// ---------- 全部链路 ----------
+
+async function loadAll() {
+  $('tlist').innerHTML = '<div class="empty">加载中…</div>';
+  ALL = (await api('/console/api/traces')).traces;
+  const chains = [...new Set(ALL.map(t => meta(t).chain))];
+  const cur = $('tchain').value;
+  $('tchain').innerHTML = '<option value="">全部链路</option>' + chains.map(c => `<option${c === cur ? ' selected' : ''}>${esc(c)}</option>`).join('');
+  renderAll();
+}
+
+function renderAll() {
+  const q = $('q').value.trim().toLowerCase();
+  const chain = $('tchain').value;
+  $('tlist').innerHTML = ALL.map((t, i) => {
+    const m = meta(t);
+    if ((q && !`${m.text} ${m.caseId || ''} ${t.id}`.toLowerCase().includes(q)) || (chain && m.chain !== chain)) return '';
+    return `<div class="item" data-i="${i}"><div class="t">${esc(m.text || t.id)}</div>
+      <div class="m"><span class="badge info">${esc(m.chain)}</span>${m.caseId ? esc(m.caseId) : ''}${verdictBadge(m.verdict)}<span>${esc(localTime(m.ts))}</span></div></div>`;
+  }).join('') || '<div class="empty">没有匹配</div>';
+  $('tlist').querySelectorAll('.item').forEach(el => el.onclick = () => {
+    $('tlist').querySelectorAll('.item').forEach(x => x.classList.toggle('active', x === el));
+    renderTrace($('tdetail'), ALL[+el.dataset.i]);
+    $('tdetail').scrollTop = 0;
+  });
+}
+
+// ---------- 事件绑定 ----------
+
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === b.dataset.view));
+  if (b.dataset.view === 'traces') loadAll();
+});
+$('send').onclick = send;
+$('text').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } };
+$('reset').onclick = async () => { await api('/console/api/reset', { user_id: user() }); loadPanel(true); };
+$('user').onchange = () => loadPanel();
+$('q').oninput = renderAll;
+$('tchain').onchange = renderAll;
+init();
+</script>
+</body>
+</html>
