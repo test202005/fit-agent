@@ -37,63 +37,58 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-### 3. 零 token 跑通（不需要 key）
+### 3. 零 token 跑通（约 20 秒，不需要 key）
 
 ```bash
-.venv/bin/python -m pytest -q                                            # 219 条确定性单测
+.venv/bin/python -m pytest -q                                            # 314 条确定性单测
 
 .venv/bin/python eval/run_intent_eval.py  --views all --run-mode stub   # 意图识别 58 条
 .venv/bin/python eval/run_extract_eval.py --views all --run-mode stub   # 抽取与受控写入 28 条
 .venv/bin/python eval/run_query_eval.py   --views all --run-mode stub   # 查询规划与执行 22 条
 .venv/bin/python eval/run_tool_eval.py    --views all --run-mode stub   # 单轮 Tool Use 28 条
 .venv/bin/python eval/run_plan_eval.py    --views all --run-mode stub   # 训练计划生成 8 条 + 2 条故障检测
+.venv/bin/python eval/run_routine_eval.py --views all --run-mode stub   # 训练安排调整 27 条
 ```
 
-看到 `pytest` 全绿、五个 Runner 无 FAIL / ERROR 即跑通。退出码约定：只有 `PASS / REVIEW` 返回 0，出现 `FAIL / ERROR` 返回 1。
+看到 `pytest` 全绿、六个 Runner 无 FAIL / ERROR 即跑通。退出码约定：只有 `PASS / REVIEW` 返回 0，出现 `FAIL / ERROR` 返回 1。
 
-### 4. 接真实模型
+### 4. 打开调试台，和助手说一句话（需要 key）
 
 ```bash
-cp .env.example .env
+cp .env.example .env          # 编辑 .env，填入 DEEPSEEK_API_KEY
+set -a; source .env; set +a   # 服务不会自动读取 .env，先导入当前 shell
+.venv/bin/python -m backend.app   # 默认 5001 端口，可用 PORT 覆盖
 ```
 
-编辑 `.env`，填入自己的 key：
+浏览器打开 `http://localhost:5001/console`，输入「今天做了50个深蹲」，会看到：
 
-```dotenv
-DEEPSEEK_API_KEY=your-key
-DEEPSEEK_MODEL=deepseek-v4-flash
-```
+1. 助手回复「已记录：今天（日期）深蹲 50 个。」，中间「我的面板」出现这条记录--这是**用户视角**；
+2. 点回复下方的 trace 链接，右侧打开**评测视角**：这一句话走过的 8 个事件，依次是请求、助手入参、操作前状态、模型第 1 轮、工具调用、模型第 2 轮、操作后状态、结果。模型每一轮看到了什么、为什么调这个工具，都能展开看原文。
+
+一句话约 5 千 token。页面只有「智能助手」一个入口；「全部链路」页可搜索所有 Trace，包括评测 Runner 跑出来的。调试台仅供本机使用。
+
+不用浏览器，也可以直接调接口：
 
 ```bash
-# 真调模型，探路集连跑三轮（会花 token）
-.venv/bin/python eval/run_intent_eval.py --views discovery --run-mode live --runs 3
-```
-
-- 五个 Runner 通用参数：`--runs`（多轮）、`--models a,b`（多模型对比，仅 live）、`--temperature`（仅稳定性专项用，升温结果不是质量结论）。
-- 计划生成 Runner 单轮 discovery Live 约 7,500 token，其他 Runner 用量以各自报告的 token 汇总为准。
-- 没配 key 就跑 live 会直接报 `DEEPSEEK_API_KEY is not configured`，不会静默降级到 stub。
-- `.env` 由 `eval/` 下的 Runner 自动读取；`.env`、trace 和评测结果均已在 `.gitignore` 中。
-
-### 5. 跑起完整服务（可选）
-
-服务入口 **不会** 自动读取 `.env`，需要先把变量导入当前 shell：
-
-```bash
-set -a; source .env; set +a
-.venv/bin/python -m backend.app          # 默认 5001 端口，可用 PORT 覆盖
-
-curl -X POST localhost:5001/api/chat -H 'Content-Type: application/json' \
-     -d '{"text":"今天卧推60kg做了4组每组8次","user_id":"demo-user","request_id":"req-001"}'
-curl -X POST localhost:5001/api/chat -H 'Content-Type: application/json' \
-     -d '{"text":"今天练了什么"}'
 curl -X POST localhost:5001/api/assistant -H 'Content-Type: application/json' \
-     -d '{"text":"中午做了100个俯卧撑，顺便把腿日挪到最前面"}'   # 统一入口
+     -d '{"text":"帮我安排一个在家无器械的20分钟练习"}'
 curl localhost:5001/health
 ```
 
-数据落在 `data/records.sqlite3`（SQLite，自动创建）。`/api/assistant` 是统一入口（V9），一个助手持有记录、查询、统计、训练安排、训练计划全部工具；`/api/chat` 是原固定链路，覆盖意图路由、记录写入和查询，保留作对照组；训练计划生成目前只通过 `eval/run_plan_eval.py` 运行，没有 HTTP 入口。
+`/api/assistant` 是统一入口：一个助手持有记录、查询、统计、训练安排、训练计划、每周回顾和动作指导全部工具，由模型决定调哪个。`/api/chat` 是早期的固定链路（意图路由 → 记录或查询），保留作对照组。数据落在 `data/records.sqlite3`（SQLite，自动创建）。
 
-服务启动后，浏览器打开 `http://localhost:5001/console` 是本地调试台：左边聊天、中间「我的面板」是用户视角（只显示用户看得到的内容），点回复下方的 trace 链接在右侧打开评测视角（完整链路、逐次工具调用、操作前后状态）。页面只有「智能助手」一个入口（同 `/api/assistant`）；「全部链路」页可搜索包括评测 Runner 在内的所有 Trace。调试台只调真实模型，会消耗 token；仅供本机使用，不改变 `/api/chat` 的行为。
+### 5. 跑真实模型评测（可选，会花 token）
+
+```bash
+# 真调模型，探路集连跑三轮
+.venv/bin/python eval/run_intent_eval.py --views discovery --run-mode live --runs 3
+```
+
+- Runner 会自动读取 `.env`，不需要 `source`。
+- 通用参数：`--runs`（多轮）、`--models a,b`（多模型对比，仅 live）、`--temperature`（仅稳定性专项用，升温结果不是质量结论）。
+- 计划生成 Runner 单轮 discovery Live 约 7,500 token，其他 Runner 用量以各自报告的 token 汇总为准。
+- 没配 key 就跑 live 会直接报 `DEEPSEEK_API_KEY is not configured`，不会静默降级到 stub。
+- `.env`、trace 和评测结果均已在 `.gitignore` 中。
 
 ### 6. 结果去哪看
 
@@ -105,7 +100,7 @@ curl localhost:5001/health
 
 ---
 
-## 五套评测一览
+## 六套评测一览
 
 | 评测 | Runner | 数据集 | 验证什么 |
 |---|---|---|---|
@@ -114,8 +109,9 @@ curl localhost:5001/health
 | 查询规划与执行 | `run_query_eval.py` | `query-dataset.jsonl` | 查询类型、时间边界、只读 |
 | 单轮 Tool Use | `run_tool_eval.py` | `tool-dataset.jsonl` | 选对工具、参数不幻觉、不该调时不调 |
 | 训练计划生成 | `run_plan_eval.py` | `plan-dataset.jsonl` | planner → tool → generator 三步，黑盒看结果，白盒看中间层 |
+| 训练安排调整 | `run_routine_eval.py` | `routine-dataset.jsonl` | 多轮工具循环：首次提交是否合规、被拒后能否自行修正、最终状态是否正确 |
 
-另有 `run_architecture_compare.py`：同口径对比两种架构的通过率、耗时、调用次数和 token（真实模型，会花 token）。
+训练计划 v2 另有三组对照 `run_plan_v2_eval.py`（只有 Live，会花 token）。另有 `run_architecture_compare.py`：同口径对比两种架构的通过率、耗时、调用次数和 token（真实模型，会花 token）。
 
 ---
 
@@ -197,17 +193,16 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
 现在能用它做什么、每项能力的示例输入和边界，见 **[当前能力清单](docs/当前能力清单.md)**。下面是主链路结构：
 
 ```
+统一助手（/api/assistant，默认入口）：
+一句话 → 模型选工具 → 代码执行并校验 → 结果回给模型 → 继续或结束（最多 6 轮、8 次工具调用）
+  工具：记录、查询、统计、训练安排、训练计划 v2、每周回顾、动作指导
+
+早期固定链路（/api/chat，对照组）：
 一句话 → 意图路由 → ┬─ record → 字段抽取 → 三态判定 → 受控写入
                     └─ query  → 查询计划 → 执行 → 结果
-
-训练计划：需求解析 planner → 动作库 tool → 计划 generator（固定三步编排）
-训练计划 v2（V10，统一助手默认）：需求解析 → 代码筛候选 → 模型编排 → 代码校验红线与数据、核算时长
-工具调用：模型自选 create_record / query_records / count_exercise，单轮最多 3 个
-训练安排：get_routine → set_routine_order，工具错误回灌、最多 5 轮
-（后三条不走 /api/chat，由评测 Runner 或本地调试台 /console 调用）
 ```
 
-这是**带完整评测闭环的多节点 LLM workflow**，不是自主 Agent，也不是 ReAct--不做概念包装。多轮对话、上下文记忆等未实现能力与后续计划见 [ROADMAP](ROADMAP.md)。
+统一助手是 ReAct 式的多轮工具循环：下一步做什么由模型根据上一步的结果决定，代码只守红线和数据正确（真实案例见 [ReAct 实例](eval/reports/ReAct实例-训练安排被拒后自我修正.md)）。早期固定链路和训练计划 v7 是写死步骤的 workflow，保留用于对照评测。多轮对话、上下文记忆等未实现能力与后续计划见 [ROADMAP](ROADMAP.md)。
 
 ## 关于报告里的 100%
 
@@ -223,7 +218,8 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
 - [评测总入口](eval/README.md)：先读这个，再选数据集、Runner 或报告
 - [当前能力清单](docs/当前能力清单.md)：现在能做什么、示例输入、边界
 - [产品总览](docs/product-overview.md) · [总体计划](docs/master-plan.md) · [Phase 1 需求](docs/prd.md)
-- 各迭代 PRD：[意图识别](docs/prd-iter1-intent.md) · [抽取写入](docs/prd-iter2-extract.md) · [查询](docs/prd-iter3-query.md) · [Tool Use](docs/prd-iter4-tooluse.md) · [SQLite 持久化](docs/prd-v6-persistence.md)
+- 各迭代 PRD：[意图识别](docs/prd-iter1-intent.md) · [抽取写入](docs/prd-iter2-extract.md) · [查询](docs/prd-iter3-query.md) · [Tool Use](docs/prd-iter4-tooluse.md) · [SQLite 持久化](docs/prd-v6-persistence.md) · [训练安排](docs/prd-v8-routine-reorder.md) · [统一助手](docs/prd-v9-unified-assistant.md) · [训练计划 v2](docs/prd-v10-plan-generation-v2.md) · [每周回顾与动作指导](docs/prd-v11-weekly-review-and-action-guide.md)
+- [统一助手链路导读](docs/统一助手链路导读.md)：模型每一轮收到了什么、循环怎么转
 - [代码实现讲解](docs/迭代一代码实现讲解.md)：每个文件为什么这么写
 - [断言方法论](eval/methodology/断言方法论.md)：四问、四态、三级漏斗
 - [数据集方法论](eval/methodology/数据集方法论.md)：六步、Golden 准入、Bad Case 回流、脱敏
