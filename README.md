@@ -1,12 +1,16 @@
 # fit-agent
 
-**一套可以直接抄走的 LLM Agent 评测脚手架**--trace-first、零 token 回归、分层数据集、故障注入。用一个最小的对话式健身记录 Agent 当载体，因为方法要跑在真实链路上才说得清。
+**健身新手的口袋搭子：说一句话，帮你安排今天练什么、记下练了什么、看这周练得够不够、讲清动作怎么做。**
 
-如果你正在写 Agent，但不知道怎么证明它「改一版没变坏」，这个仓库是给你看的。
+不用填表，不用装手表，不用先学一堆健身知识。适合想开始运动但不知道从哪练起、总坚持不下来、训练条件每次不一样的人。为什么用它、怎么用、不做什么，见 [产品介绍](docs/产品介绍.md)；现在具体能做什么，见 [当前能力清单](docs/当前能力清单.md)。
+
+它按 AI Native 的思路做：做什么、怎么做由模型决定，代码只守红线和数据正确，见 [AI Native 设计基调](docs/AI-Native设计基调.md)。
+
+同一个产品，也是一份「AI 产品怎么测」的完整样本：每一句话都有可回溯的 Trace，回归不花 token，数据集分层、故障注入、多轮评测都跑在真实链路上。如果你在做 AI 测试或写 Agent，想知道怎么证明它「改一版没变坏」，下面的评测部分就是给你看的。
 
 ---
 
-## 它解决什么问题
+## 评测解决什么问题
 
 LLM 的输出不确定、调用要花钱，于是大多数 Agent 项目的测试停在「手动跑几条看看对不对」。这个仓库把它变成可重复的工程：
 
@@ -222,10 +226,9 @@ runner 跑前跑后对源码目录做 mtime 快照比对，有意外写入直接
 
 ## 文档
 
-- [Agent 评测能力与项目实践总纲](docs/Agent能力与评测全景.md)：传统测试迁移、能力树、需求到评测、Pipeline、统计与项目练习
 - [评测总入口](eval/README.md)：先读这个，再选数据集、Runner 或报告
 - [当前能力清单](docs/当前能力清单.md)：现在能做什么、示例输入、边界
-- [产品总览](docs/product-overview.md) · [总体计划](docs/master-plan.md) · [Phase 1 需求](docs/prd.md)
+- [产品介绍](docs/产品介绍.md) · [AI Native 设计基调](docs/AI-Native设计基调.md) · [总体计划](docs/master-plan.md) · [Phase 1 需求](docs/prd.md)
 - 各迭代 PRD：[意图识别](docs/prd-iter1-intent.md) · [抽取写入](docs/prd-iter2-extract.md) · [查询](docs/prd-iter3-query.md) · [Tool Use](docs/prd-iter4-tooluse.md) · [SQLite 持久化](docs/prd-v6-persistence.md) · [训练安排](docs/prd-v8-routine-reorder.md) · [统一助手](docs/prd-v9-unified-assistant.md) · [训练计划 v2](docs/prd-v10-plan-generation-v2.md) · [每周回顾与动作指导](docs/prd-v11-weekly-review-and-action-guide.md)
 - [统一助手链路导读](docs/统一助手链路导读.md)：模型每一轮收到了什么、循环怎么转
 - [代码实现讲解](docs/迭代一代码实现讲解.md)：每个文件为什么这么写
