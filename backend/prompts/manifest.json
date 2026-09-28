@@ -4,5 +4,10 @@
   "intent_router": {"version": "v1", "file": "intent_router_v1.txt", "eval_runner": "eval/run_intent_eval.py"},
   "query_planner": {"version": "v1", "file": "query_planner_v1.txt", "eval_runner": "eval/run_query_eval.py"},
   "workout_planner": {"version": "v1", "file": "workout_planner_v1.txt", "eval_runner": "eval/run_plan_eval.py"},
-  "workout_generator": {"version": "v3", "file": "workout_generator_v3.txt", "eval_runner": "eval/run_plan_eval.py"}
+  "workout_generator": {"version": "v3", "file": "workout_generator_v3.txt", "eval_runner": "eval/run_plan_eval.py"},
+  "routine_agent": {"version": "v1", "file": "routine_agent_v1.txt", "eval_runner": "eval/run_routine_eval.py"},
+  "assistant": {"version": "v5", "file": "assistant_v5.txt", "eval_runner": "eval/run_assistant_eval.py"},
+  "plan_need": {"version": "v1", "file": "plan_need_v1.txt", "eval_runner": "eval/run_plan_v2_eval.py"},
+  "plan_compose": {"version": "v3", "file": "plan_compose_v3.txt", "eval_runner": "eval/run_plan_v2_eval.py"},
+  "plan_llm_only": {"version": "v1", "file": "plan_llm_only_v1.txt", "eval_runner": "eval/run_plan_v2_eval.py"}
 }
